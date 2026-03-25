@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-brand: #22c55e;
+  }
+  
+  body {
+    background-color: #FFFDF7;
+    @apply text-gray-900 font-sans;
+  }
+
+  * {
+    @apply antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl p-5;
+    border: 3px solid #000;
+    box-shadow: 4px 4px 0px 0px #000;
+  }
+
+  .card:hover {
+    box-shadow: 2px 2px 0px 0px #000;
+    transform: translate(2px, 2px);
+    transition: all 0.15s ease;
+  }
+  
+  .btn-primary {
+    @apply bg-brand-500 text-white font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
+    border: 3px solid #000;
+    box-shadow: 2px 2px 0px 0px #000;
+  }
+
+  .btn-primary:hover {
+    @apply bg-brand-600;
+    box-shadow: none;
+    transform: translate(2px, 2px);
+  }
+
+  .btn-primary:active {
+    box-shadow: none;
+    transform: translate(4px, 4px);
+  }
+  
+  .btn-secondary {
+    @apply text-black font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
+    background-color: #FFD803;
+    border: 3px solid #000;
+    box-shadow: 2px 2px 0px 0px #000;
+  }
+
+  .btn-secondary:hover {
+    box-shadow: none;
+    transform: translate(2px, 2px);
+  }
+
+  .btn-danger {
+    @apply text-white font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
+    background-color: #FF4444;
+    border: 3px solid #000;
+    box-shadow: 2px 2px 0px 0px #000;
+  }
+
+  .btn-danger:hover {
+    box-shadow: none;
+    transform: translate(2px, 2px);
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider;
+    border: 2px solid #000;
+  }
+  
+  .badge-muscle {
+    @apply inline-flex items-center px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-200 text-brand-900;
+    border: 2px solid #000;
+  }
+
+  .neo-input {
+    @apply w-full px-4 py-3 rounded-xl bg-white font-bold text-lg transition-shadow;
+    border: 3px solid #000;
+  }
+
+  .neo-input:focus {
+    box-shadow: 4px 4px 0px 0px #16a34a;
+    outline: none;
+  }
+
+  .neo-tag {
+    @apply inline-block px-3 py-1 rounded-lg font-bold text-sm;
+    border: 2px solid #000;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

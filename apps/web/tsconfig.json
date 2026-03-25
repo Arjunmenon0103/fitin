@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@fitin/core": ["../../packages/core/src"],
+      "@fitin/core/*": ["../../packages/core/src/*"]
+    },
+    "noEmit": true
+  },
+  "include": ["src"]
+}

@@ -1,6 +1,18 @@
 import type { UserProfile, WeightEntry } from '@fitin/core';
 import { hasSupabaseConfig, supabase } from './supabase';
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function sanitizeProfile(profile: UserProfile): UserProfile {
+  return {
+    ...profile,
+    age: clamp(Number(profile.age) || 25, 10, 100),
+    heightCm: clamp(Number(profile.heightCm) || 170, 100, 250),
+    weightKg: clamp(Number(profile.weightKg) || 70, 30, 300),
+    targetWeightKg: clamp(Number(profile.targetWeightKg) || 65, 30, 300),
+  };
+}
+
 export interface AppFeedback {
   id: string;
   user_email: string | null;
@@ -17,6 +29,35 @@ export interface AdminEmailEntry {
   created_at: string;
 }
 
+export interface AdminNotification {
+  id: number;
+  title: string;
+  summary: string;
+  change_scope: 'web' | 'mobile' | 'both';
+  status: 'pending' | 'auto_fixable' | 'needs_cascade' | 'in_progress' | 'testing' | 'completed' | 'rejected' | 'parked';
+  complexity: 'simple' | 'moderate' | 'complex';
+  assigned_to: 'agent' | 'cascade' | 'human';
+  agent_action: string | null;
+  resolution_notes: string | null;
+  source_feedback_id?: string | null;
+  source_job_id?: number | null;
+  created_at: string;
+  approved_at: string | null;
+}
+
+export interface FeedbackAgentJob {
+  id: number;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  trigger_source: 'admin' | 'manual' | 'cron';
+  processed_feedback_count: number;
+  created_notifications_count: number;
+  error_message: string | null;
+  result_summary: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+}
+
 export async function markFeedbackReviewed(feedbackId: string, reviewed: boolean) {
   if (!hasSupabaseConfig || !supabase) return { error: 'Supabase is not configured' };
 
@@ -24,6 +65,87 @@ export async function markFeedbackReviewed(feedbackId: string, reviewed: boolean
     .from('feedback')
     .update({ reviewed })
     .eq('id', feedbackId);
+
+  return { error: error?.message };
+}
+
+export async function getFeedbackAgentJobs(): Promise<FeedbackAgentJob[]> {
+  if (!hasSupabaseConfig || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from('feedback_agent_jobs')
+    .select('id, status, trigger_source, processed_feedback_count, created_notifications_count, error_message, result_summary, created_at, started_at, finished_at')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error || !data) return [];
+  return data as FeedbackAgentJob[];
+}
+
+export async function runFeedbackAgent(triggerSource: 'admin' | 'manual' | 'cron' = 'admin') {
+  if (!hasSupabaseConfig || !supabase) return { error: 'Supabase is not configured' };
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { error: 'Please log in again. Your session is missing or expired.' };
+  }
+
+  const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin_user');
+  if (adminError || !isAdmin) {
+    return { error: 'Admin access is required to run the feedback agent.' };
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (sessionError || !accessToken) {
+    return { error: 'Missing auth token for Edge Function call. Please log in again.' };
+  }
+
+  const { data, error } = await supabase.functions.invoke('run-feedback-agent', {
+    body: { triggerSource },
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  return {
+    data,
+    error: error?.message || null,
+  };
+}
+
+export async function getAdminNotifications(): Promise<AdminNotification[]> {
+  if (!hasSupabaseConfig || !supabase) return [];
+
+  const { data, error } = await supabase
+    .from('admin_notifications')
+    .select('id, title, summary, change_scope, status, complexity, assigned_to, agent_action, resolution_notes, source_feedback_id, source_job_id, created_at, approved_at')
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error || !data) return [];
+  return data as AdminNotification[];
+}
+
+export async function setAdminNotificationStatus(
+  notificationId: number,
+  status: AdminNotification['status'],
+  extraFields?: Partial<Pick<AdminNotification, 'assigned_to' | 'resolution_notes'>>
+) {
+  if (!hasSupabaseConfig || !supabase) return { error: 'Supabase is not configured' };
+
+  const userId = (await supabase.auth.getUser()).data.user?.id || null;
+  const payload: Record<string, unknown> = {
+    status,
+    approved_at: status === 'completed' ? new Date().toISOString() : null,
+    approved_by: status === 'completed' ? userId : null,
+    ...extraFields,
+  };
+
+  const { error } = await supabase
+    .from('admin_notifications')
+    .update(payload)
+    .eq('id', notificationId);
 
   return { error: error?.message };
 }
@@ -56,18 +178,20 @@ export async function loadProfile(userId: string): Promise<UserProfile | null> {
 export async function saveProfile(userId: string, profile: UserProfile) {
   if (!hasSupabaseConfig || !supabase) return;
 
+  const safeProfile = sanitizeProfile(profile);
+
   await supabase.from('profiles').upsert({
     id: userId,
-    name: profile.name,
-    age: profile.age,
-    gender: profile.gender,
-    height_cm: profile.heightCm,
-    weight_kg: profile.weightKg,
-    target_weight_kg: profile.targetWeightKg,
-    activity_level: profile.activityLevel,
-    region: profile.region,
-    goal: profile.goal,
-    created_at: profile.createdAt,
+    name: safeProfile.name,
+    age: safeProfile.age,
+    gender: safeProfile.gender,
+    height_cm: safeProfile.heightCm,
+    weight_kg: safeProfile.weightKg,
+    target_weight_kg: safeProfile.targetWeightKg,
+    activity_level: safeProfile.activityLevel,
+    region: safeProfile.region,
+    goal: safeProfile.goal,
+    created_at: safeProfile.createdAt,
   });
 }
 

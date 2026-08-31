@@ -1,5 +1,19 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Users, Eye, MessageSquare, RefreshCw, UserPlus, Trash2, ChevronDown, Bot, Zap, Clock, CheckCircle2, XCircle, AlertTriangle, User, Monitor } from 'lucide-react';
+import {
+  RefreshCw,
+  UserPlus,
+  Trash2,
+  ChevronDown,
+  Zap,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  User,
+  Monitor,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { clsx } from 'clsx';
 import {
   addAdminEmail,
   getAdminEmails,
@@ -43,21 +57,27 @@ const EMPTY_OVERVIEW: OverviewState = {
   error: null,
 };
 
-const STATUS_CONFIG: Record<string, { bg: string; label: string; icon: typeof Bot }> = {
-  auto_fixable: { bg: '#B5FF3C', label: 'AUTO-FIXABLE', icon: Zap },
-  needs_cascade: { bg: '#FFD803', label: 'NEEDS CASCADE', icon: Monitor },
-  in_progress: { bg: '#00B4D8', label: 'IN PROGRESS', icon: Clock },
-  testing: { bg: '#C4B5FD', label: 'TESTING', icon: AlertTriangle },
-  completed: { bg: '#86EFAC', label: 'COMPLETED', icon: CheckCircle2 },
-  rejected: { bg: '#FFB4A2', label: 'REJECTED', icon: XCircle },
-  parked: { bg: '#E5E7EB', label: 'PARKED (HUMAN)', icon: User },
-  pending: { bg: '#FDE68A', label: 'PENDING', icon: Clock },
+const PRIMARY_ADMIN = '30may1991@gmail.com';
+
+/*
+ * Pipeline status. `fill` tints the chip, `rule` tints the left rule on the card.
+ * Categorical only. Actions stay on the violet accent.
+ */
+const STATUS_CONFIG: Record<string, { fill: string; rule: string; label: string; icon: LucideIcon }> = {
+  auto_fixable: { fill: 'bg-surface-cyan', rule: '#A4F6F8', label: 'Auto-fixable', icon: Zap },
+  needs_cascade: { fill: 'bg-surface-gold', rule: '#FFD24A', label: 'Needs Cascade', icon: Monitor },
+  in_progress: { fill: 'bg-surface-blue', rule: '#DDFCFC', label: 'In progress', icon: Clock },
+  testing: { fill: 'bg-surface-periwinkle', rule: '#D7CDF1', label: 'Testing', icon: AlertTriangle },
+  completed: { fill: 'bg-surface-yellow', rule: '#FAED8F', label: 'Completed', icon: CheckCircle2 },
+  rejected: { fill: 'bg-surface-rose', rule: '#FEB6FA', label: 'Rejected', icon: XCircle },
+  parked: { fill: 'bg-paper-grey', rule: '#E2E1DD', label: 'Parked', icon: User },
+  pending: { fill: 'bg-surface-amber', rule: '#FBBE63', label: 'Pending', icon: Clock },
 };
 
-const OWNER_CONFIG: Record<string, { bg: string; label: string }> = {
-  agent: { bg: '#B5FF3C', label: 'AGENT (auto)' },
-  cascade: { bg: '#FFD803', label: 'CASCADE (dev session)' },
-  human: { bg: '#FFB4A2', label: 'HUMAN (product decision)' },
+const OWNER_LABELS: Record<string, string> = {
+  agent: 'Agent (auto)',
+  cascade: 'Cascade (dev session)',
+  human: 'Human (product call)',
 };
 
 const APP_FLOW_DIAGRAM = `
@@ -93,21 +113,36 @@ const ARCHITECTURE_TOPICS = [
     teen: 'We build two apps using JavaScript/TypeScript. One runs in browser (web), one runs on Android (mobile). Both talk to the same Supabase backend, so your data stays in sync.',
     architect:
       'Monorepo with shared package (`@fitin/core`), web built via Vite + React, mobile built via Expo + React Native. Shared domain model, separate presentation layers, common backend integration pattern.',
-    points: ['Web: React + Vite + React Router', 'Mobile: Expo Router + React Native + EAS build', 'Shared business logic package in monorepo', 'Same Supabase project powers both clients'],
+    points: [
+      'Web: React + Vite + React Router',
+      'Mobile: Expo Router + React Native + EAS build',
+      'Shared business logic package in monorepo',
+      'Same Supabase project powers both clients',
+    ],
   },
   {
     title: 'Data flow and security',
     teen: 'When you log in, the app gets a secure session. Every profile or weight update goes safely to the cloud and loads back when you open the app again.',
     architect:
       'Supabase Auth issues sessions; client SDK uses secure storage/session persistence. Data access through Postgres tables with RLS policies and admin RPC for elevated checks (`is_admin_user`).',
-    points: ['Authentication with Supabase Auth', 'Postgres tables for profiles, weight logs, feedback, analytics events', 'Admin role resolved through `admin_emails` + RPC', 'Per-user data isolation via RLS'],
+    points: [
+      'Authentication with Supabase Auth',
+      'Postgres tables for profiles, weight logs, feedback, analytics events',
+      'Admin role resolved through `admin_emails` + RPC',
+      'Per-user data isolation via RLS',
+    ],
   },
   {
     title: 'Testing and release path',
     teen: 'We make an APK, upload it to Firebase App Distribution, and invite testers by email. Later, we switch to Google Play when you want public release.',
     architect:
       'Current channel is direct binary distribution for rapid QA. Expo/EAS generates APK/AAB artifacts; Firebase App Distribution manages tester cohort, release notes, and download/install flow.',
-    points: ['Preview builds as APK for quick testing', 'Production builds as AAB for Play Store later', 'Firebase handles small private tester groups', 'Play Console is only needed for public launch'],
+    points: [
+      'Preview builds as APK for quick testing',
+      'Production builds as AAB for Play Store later',
+      'Firebase handles small private tester groups',
+      'Play Console is only needed for public launch',
+    ],
   },
 ] as const;
 
@@ -118,6 +153,31 @@ const COST_LINES = [
   { item: 'Domain + hosting (web)', estimate: '$0-$20/mo', detail: 'Depends on provider and traffic.' },
   { item: 'Google Play account (later)', estimate: '$25 one-time', detail: 'Only needed when publishing publicly.' },
 ] as const;
+
+/** Collapsible section styled as a hairline row, matching the rest of the console. */
+function Disclosure({
+  title,
+  open,
+  children,
+}: {
+  title: string;
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details open={open} className="group border-t border-ink/10 last:border-b">
+      <summary className="flex cursor-pointer list-none items-center justify-between py-3.5">
+        <span className="text-[14px] font-bold">{title}</span>
+        <ChevronDown
+          size={16}
+          strokeWidth={2}
+          className="text-ink-faint transition-transform duration-200 group-open:rotate-180"
+        />
+      </summary>
+      <div className="pb-5">{children}</div>
+    </details>
+  );
+}
 
 export default function Admin() {
   const refreshAdminStatus = useAuthStore((s) => s.refreshAdminStatus);
@@ -172,15 +232,23 @@ export default function Admin() {
       return;
     }
 
-    setAdminActionNotice('Admin added successfully.');
+    setAdminActionNotice('Admin added.');
     setNewAdminEmail('');
     await refresh();
     await refreshAdminStatus();
   };
 
-  const handleNotificationStatus = async (notificationId: number, status: AdminNotification['status'], assignedTo?: AdminNotification['assigned_to']) => {
+  const handleNotificationStatus = async (
+    notificationId: number,
+    status: AdminNotification['status'],
+    assignedTo?: AdminNotification['assigned_to']
+  ) => {
     setUpdatingNotificationId(notificationId);
-    await setAdminNotificationStatus(notificationId, status, assignedTo ? { assigned_to: assignedTo } : undefined);
+    await setAdminNotificationStatus(
+      notificationId,
+      status,
+      assignedTo ? { assigned_to: assignedTo } : undefined
+    );
     setUpdatingNotificationId(null);
     await refresh();
   };
@@ -199,15 +267,15 @@ export default function Admin() {
     const jobId = result.data?.jobId;
     setAgentRunNotice(
       typeof jobId === 'number'
-        ? `Job #${jobId} completed. Check pipeline below.`
+        ? `Job #${jobId} completed. Check the pipeline below.`
         : 'Agent run completed. Refresh to see updates.'
     );
     await refresh();
   };
 
   const handleRemoveAdmin = async (email: string) => {
-    if (email === '30may1991@gmail.com') {
-      setAdminActionNotice('Primary admin cannot be removed.');
+    if (email === PRIMARY_ADMIN) {
+      setAdminActionNotice('The primary admin cannot be removed.');
       return;
     }
 
@@ -220,97 +288,92 @@ export default function Admin() {
       return;
     }
 
-    setAdminActionNotice('Admin removed successfully.');
+    setAdminActionNotice('Admin removed.');
     await refresh();
     await refreshAdminStatus();
   };
 
-  const filteredNotifications = pipelineFilter === 'all'
-    ? notifications
-    : notifications.filter((n) => n.status === pipelineFilter);
+  const filteredNotifications =
+    pipelineFilter === 'all'
+      ? notifications
+      : notifications.filter((n) => n.status === pipelineFilter);
 
-  const statusCounts = notifications.reduce((acc, n) => {
-    acc[n.status] = (acc[n.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const statusCounts = notifications.reduce(
+    (acc, n) => {
+      acc[n.status] = (acc[n.status] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  const STATS = [
+    { label: 'Users', value: overview.totalProfiles },
+    { label: 'Views (7d)', value: overview.totalViews7d },
+    { label: 'Active (7d)', value: overview.activeUsers7d },
+    { label: 'Unreviewed', value: overview.pendingFeedback },
+  ];
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-10 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black dark:text-slate-100">Admin Console</h1>
-        <button onClick={refresh} className="btn-secondary py-2 px-4 text-xs inline-flex items-center gap-2">
-          <RefreshCw size={14} /> Refresh
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
+      <header className="rise flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow">Internal</span>
+          <h1 className="mt-2 text-[2.25rem] leading-[0.95] md:text-[3rem]">Admin console.</h1>
+        </div>
+        <button onClick={refresh} className="btn-ghost px-4 py-2.5 text-[13px]">
+          <RefreshCw size={14} strokeWidth={2} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
-      </div>
+      </header>
 
       {overview.error && (
-        <div className="mb-4 rounded-xl border-[3px] border-black p-3" style={{ backgroundColor: '#FFB4A2' }}>
-          <p className="text-xs font-black uppercase tracking-wide text-black">{overview.error}</p>
-        </div>
+        <p role="alert" className="mt-4 text-[13px] font-semibold text-wine">
+          {overview.error}
+        </p>
       )}
 
-      {/* Stats row */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="card bg-[#B5FF3C] dark:bg-[#8BC34A] dark:border-slate-100">
-          <Users size={18} className="text-black dark:text-slate-900 mb-1" />
-          <p className="text-2xl font-black text-black dark:text-slate-900">{overview.totalProfiles}</p>
-          <p className="text-[10px] font-black uppercase text-gray-700 dark:text-slate-800">Users</p>
-        </div>
-        <div className="card bg-[#00B4D8] dark:bg-[#0288D1]">
-          <Eye size={18} className="text-black dark:text-white mb-1" />
-          <p className="text-2xl font-black text-black dark:text-white">{overview.totalViews7d}</p>
-          <p className="text-[10px] font-black uppercase text-gray-700 dark:text-slate-300">Views (7d)</p>
-        </div>
-        <div className="card bg-[#FFD803] dark:bg-[#FBC02D] dark:border-slate-100">
-          <BarChart3 size={18} className="text-black dark:text-slate-900 mb-1" />
-          <p className="text-2xl font-black text-black dark:text-slate-900">{overview.activeUsers7d}</p>
-          <p className="text-[10px] font-black uppercase text-gray-700 dark:text-slate-800">Active (7d)</p>
-        </div>
-        <div className="card bg-[#FF8C42] dark:bg-[#E65100]">
-          <MessageSquare size={18} className="text-black dark:text-white mb-1" />
-          <p className="text-2xl font-black text-black dark:text-white">{overview.pendingFeedback}</p>
-          <p className="text-[10px] font-black uppercase text-gray-700 dark:text-slate-300">Unreviewed</p>
-        </div>
-      </section>
+      <dl
+        className="rise mt-6 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-ink/10 py-6 lg:grid-cols-4"
+        style={{ '--i': 1 } as React.CSSProperties}
+      >
+        {STATS.map((s) => (
+          <div key={s.label}>
+            <dd className="font-display text-[2.25rem] leading-none">{s.value}</dd>
+            <dt className="mt-2 text-[12px] font-semibold text-ink-soft">{s.label}</dt>
+          </div>
+        ))}
+      </dl>
 
-      {/* ===== MAIN SECTION: Feedback Pipeline ===== */}
-      <section className="card mb-6 bg-[#FFFDF7] dark:bg-slate-900 border-[3px] border-black" style={{ boxShadow: '4px 4px 0px 0px #000' }}>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <Bot size={24} className="text-black dark:text-slate-100" />
-            <div>
-              <h2 className="text-xl font-black uppercase text-black dark:text-slate-100">Feedback Pipeline</h2>
-              <p className="text-[10px] font-black uppercase text-gray-500 dark:text-slate-400 mt-0.5">
-                Agent triages feedback. Simple fixes = auto. Complex = parked for Cascade or human.
-              </p>
-            </div>
+      {/* Feedback pipeline is the reason this page exists, so it leads. */}
+      <section className="rise panel mt-6" style={{ '--i': 2 } as React.CSSProperties}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-[1.5rem] leading-none">Feedback pipeline</h2>
+            <p className="mt-2 max-w-[58ch] text-[14px] leading-relaxed text-ink-soft">
+              The agent triages incoming feedback. Simple fixes run automatically. Anything complex
+              is parked for a Cascade session or a human product call.
+            </p>
           </div>
           <button
             onClick={handleRunFeedbackAgent}
             disabled={agentRunLoading}
-            className="btn-primary px-4 py-2 text-xs inline-flex items-center gap-2"
+            className="btn-primary px-5 py-2.5 text-[13px]"
           >
-            <RefreshCw size={14} className={agentRunLoading ? 'animate-spin' : ''} />
-            {agentRunLoading ? 'Running...' : 'Run Agent'}
+            <RefreshCw size={14} strokeWidth={2} className={agentRunLoading ? 'animate-spin' : ''} />
+            {agentRunLoading ? 'Running' : 'Run agent'}
           </button>
         </div>
 
         {agentRunNotice && (
-          <div className="rounded-xl border-[3px] border-black px-3 py-2 mb-3 bg-[#ECFCCB] dark:bg-slate-800">
-            <p className="text-[11px] font-black uppercase tracking-wide text-black dark:text-slate-100">{agentRunNotice}</p>
-          </div>
+          <p role="status" className="mt-4 text-[13px] font-semibold text-ink-soft">
+            {agentRunNotice}
+          </p>
         )}
 
-        {/* Status filter chips */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="mt-5 flex flex-wrap gap-1.5">
           <button
             onClick={() => setPipelineFilter('all')}
-            className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-            style={{
-              backgroundColor: pipelineFilter === 'all' ? '#000' : '#F3F4F6',
-              color: pipelineFilter === 'all' ? '#FFF' : '#000',
-              boxShadow: '2px 2px 0px 0px #000',
-            }}
+            aria-pressed={pipelineFilter === 'all'}
+            className={clsx('pill px-3.5 py-1.5', pipelineFilter === 'all' && 'pill-on')}
           >
             All ({notifications.length})
           </button>
@@ -321,12 +384,8 @@ export default function Admin() {
               <button
                 key={key}
                 onClick={() => setPipelineFilter(key)}
-                className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                style={{
-                  backgroundColor: pipelineFilter === key ? cfg.bg : '#F3F4F6',
-                  color: '#000',
-                  boxShadow: '2px 2px 0px 0px #000',
-                }}
+                aria-pressed={pipelineFilter === key}
+                className={clsx('pill px-3.5 py-1.5', pipelineFilter === key && 'pill-on')}
               >
                 {cfg.label} ({count})
               </button>
@@ -334,89 +393,80 @@ export default function Admin() {
           })}
         </div>
 
-        {/* Pipeline items */}
         {loading ? (
-          <p className="text-xs font-black uppercase text-gray-500 dark:text-slate-400 py-4">Loading pipeline...</p>
+          <div className="mt-5 space-y-3" aria-busy="true" aria-live="polite">
+            <div className="h-28 rounded-tile bg-paper-grey" />
+            <div className="h-28 rounded-tile bg-paper-grey" />
+            <span className="sr-only">Loading pipeline</span>
+          </div>
         ) : filteredNotifications.length === 0 ? (
-          <p className="text-xs font-black uppercase text-gray-500 dark:text-slate-400 py-4">
-            {notifications.length === 0 ? 'No feedback processed yet. Click "Run Agent" to start.' : 'No items match this filter.'}
-          </p>
+          <div className="mt-5 rounded-tile bg-paper-warm px-6 py-10 text-center">
+            <p className="text-[15px] font-bold">
+              {notifications.length === 0 ? 'Pipeline is empty' : 'Nothing matches this filter'}
+            </p>
+            <p className="mx-auto mt-1.5 max-w-[40ch] text-[14px] text-ink-soft">
+              {notifications.length === 0
+                ? 'Run the agent to triage the feedback that has come in.'
+                : 'Clear the filter to see the rest of the queue.'}
+            </p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="mt-5 space-y-3">
             {filteredNotifications.map((item) => {
               const sc = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
-              const oc = OWNER_CONFIG[item.assigned_to] || OWNER_CONFIG.agent;
               const StatusIcon = sc.icon;
               const isUpdating = updatingNotificationId === item.id;
+              const busy = isUpdating ? 'Saving' : null;
 
               return (
                 <article
                   key={item.id}
-                  className="rounded-xl border-[3px] border-black dark:border-slate-600 p-4 bg-white dark:bg-slate-800"
-                  style={{ boxShadow: '3px 3px 0px 0px #000', borderLeftWidth: '6px', borderLeftColor: sc.bg }}
+                  className="rounded-tile border border-ink/10 bg-paper p-4"
+                  style={{ borderLeftWidth: 5, borderLeftColor: sc.rule }}
                 >
-                  {/* Row 1: Status + Owner + Complexity */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md border-[2px] border-black text-[10px] font-black uppercase"
-                      style={{ backgroundColor: sc.bg }}
-                    >
-                      <StatusIcon size={11} /> {sc.label}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className={clsx('chip', sc.fill)}>
+                      <StatusIcon size={12} strokeWidth={2} /> {sc.label}
                     </span>
-                    <span
-                      className="px-2 py-0.5 rounded-md border-[2px] border-black text-[10px] font-black uppercase"
-                      style={{ backgroundColor: oc.bg }}
-                    >
-                      {oc.label}
+                    <span className="chip-outline">
+                      {OWNER_LABELS[item.assigned_to] || OWNER_LABELS.agent}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md border-[2px] border-black text-[10px] font-black uppercase bg-white dark:bg-slate-700 dark:text-slate-100">
-                      {item.complexity}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-md border-[2px] border-black text-[10px] font-black uppercase bg-white dark:bg-slate-700 dark:text-slate-100">
-                      {item.change_scope}
-                    </span>
+                    <span className="chip-outline capitalize">{item.complexity}</span>
+                    <span className="chip-outline capitalize">{item.change_scope}</span>
                   </div>
 
-                  {/* Row 2: Summary */}
-                  <p className="text-sm font-bold text-black dark:text-slate-100 mb-1">{item.summary}</p>
+                  <p className="mt-3 text-[15px] font-bold">{item.summary}</p>
 
-                  {/* Row 3: Agent action / resolution notes */}
                   {item.agent_action && (
-                    <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">
+                    <p className="mt-1.5 text-[13px] text-ink-soft">
                       Agent action: {item.agent_action}
                     </p>
                   )}
                   {item.resolution_notes && (
-                    <p className="text-[11px] font-medium text-gray-600 dark:text-slate-400 mb-2">
-                      {item.resolution_notes}
-                    </p>
+                    <p className="mt-1 text-[13px] text-ink-faint">{item.resolution_notes}</p>
                   )}
 
-                  {/* Row 4: Timestamp */}
-                  <p className="text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 mb-3">
+                  <p className="mt-3 text-[12px] text-ink-faint">
                     {new Date(item.created_at).toLocaleString()}
-                    {item.approved_at && ` — Done: ${new Date(item.approved_at).toLocaleString()}`}
+                    {item.approved_at && ` · done ${new Date(item.approved_at).toLocaleString()}`}
                   </p>
 
-                  {/* Row 5: Actions */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {item.status === 'auto_fixable' && (
                       <>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'completed', 'agent')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#86EFAC', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-primary px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Mark Done'}
+                          {busy || 'Mark done'}
                         </button>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'needs_cascade', 'cascade')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#FFD803', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-ghost px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Send to Cascade'}
+                          {busy || 'Send to Cascade'}
                         </button>
                       </>
                     )}
@@ -425,18 +475,16 @@ export default function Admin() {
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'in_progress', 'cascade')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#00B4D8', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-primary px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Start in Cascade'}
+                          {busy || 'Start in Cascade'}
                         </button>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'parked', 'human')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#E5E7EB', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-ghost px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Park'}
+                          {busy || 'Park'}
                         </button>
                       </>
                     )}
@@ -445,18 +493,16 @@ export default function Admin() {
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'testing')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#C4B5FD', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-primary px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Move to Testing'}
+                          {busy || 'Move to testing'}
                         </button>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'completed')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#86EFAC', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-ghost px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Mark Done'}
+                          {busy || 'Mark done'}
                         </button>
                       </>
                     )}
@@ -465,18 +511,16 @@ export default function Admin() {
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'completed')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#86EFAC', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-primary px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Test Passed'}
+                          {busy || 'Test passed'}
                         </button>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'in_progress', 'cascade')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#FFB4A2', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-danger px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Test Failed — Back'}
+                          {busy || 'Test failed, send back'}
                         </button>
                       </>
                     )}
@@ -484,15 +528,14 @@ export default function Admin() {
                       <button
                         onClick={() => handleNotificationStatus(item.id, 'needs_cascade', 'cascade')}
                         disabled={isUpdating}
-                        className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                        style={{ backgroundColor: '#FFD803', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                        className="btn-primary px-4 py-2 text-[12px]"
                       >
-                        {isUpdating ? '...' : 'Unpark → Cascade'}
+                        {busy || 'Unpark to Cascade'}
                       </button>
                     )}
                     {(item.status === 'completed' || item.status === 'rejected') && (
-                      <span className="text-[10px] font-black uppercase text-gray-400 dark:text-slate-500 py-1">
-                        {item.status === 'completed' ? 'Done' : 'Rejected'} — no actions
+                      <span className="text-[12px] font-semibold text-ink-faint">
+                        {item.status === 'completed' ? 'Done' : 'Rejected'}. No actions left.
                       </span>
                     )}
                     {item.status === 'pending' && (
@@ -500,18 +543,16 @@ export default function Admin() {
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'needs_cascade', 'cascade')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#FFD803', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-primary px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Send to Cascade'}
+                          {busy || 'Send to Cascade'}
                         </button>
                         <button
                           onClick={() => handleNotificationStatus(item.id, 'rejected')}
                           disabled={isUpdating}
-                          className="px-3 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase tracking-wider"
-                          style={{ backgroundColor: '#FFB4A2', color: '#000', boxShadow: '2px 2px 0px 0px #000' }}
+                          className="btn-danger px-4 py-2 text-[12px]"
                         >
-                          {isUpdating ? '...' : 'Reject'}
+                          {busy || 'Reject'}
                         </button>
                       </>
                     )}
@@ -523,198 +564,206 @@ export default function Admin() {
         )}
       </section>
 
-      {/* Agent Run History (compact) */}
-      <details className="card mb-6 bg-[#FFF2CC] dark:bg-slate-900 rounded-xl border-[3px] border-black" style={{ boxShadow: '2px 2px 0px 0px #000' }}>
-        <summary className="list-none cursor-pointer flex items-center justify-between px-1">
-          <h2 className="text-sm font-black uppercase text-black dark:text-slate-100">Agent Run History ({agentJobs.length})</h2>
-          <ChevronDown size={16} className="text-black dark:text-slate-100" />
-        </summary>
-        <div className="mt-3 space-y-2 max-h-[240px] overflow-auto pr-1">
+      <section className="panel mt-4">
+        <Disclosure title={`Agent run history (${agentJobs.length})`}>
           {agentJobs.length === 0 ? (
-            <p className="text-xs font-black uppercase text-gray-500 dark:text-slate-400">No runs yet.</p>
-          ) : agentJobs.map((job) => (
-            <div
-              key={job.id}
-              className="rounded-lg border-[2px] border-black p-2 bg-white dark:bg-slate-800 flex flex-wrap items-center gap-2"
-              style={{ boxShadow: '1px 1px 0px 0px #000' }}
-            >
-              <span className="text-[10px] font-black uppercase text-black dark:text-slate-100">#{job.id}</span>
-              <span
-                className="px-2 py-0.5 rounded text-[10px] font-black uppercase border border-black"
-                style={{
-                  backgroundColor: job.status === 'completed' ? '#86EFAC' : job.status === 'failed' ? '#FFB4A2' : '#FDE68A',
-                }}
-              >
-                {job.status}
-              </span>
-              <span className="text-[10px] font-bold text-gray-600 dark:text-slate-400 flex-1">
-                {job.result_summary || job.error_message || 'Processing...'}
-              </span>
-              <span className="text-[10px] font-black text-gray-400 dark:text-slate-500">
-                {job.finished_at ? new Date(job.finished_at).toLocaleString() : '...'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      {/* Bottom row: Raw Feedback + Admin Access + Top Users */}
-      <div className="grid lg:grid-cols-3 gap-4 mb-6">
-        <section className="card lg:col-span-2">
-          <h2 className="text-lg font-black uppercase text-black dark:text-slate-100 mb-3">Raw Feedback</h2>
-          {loading ? (
-            <p className="text-xs font-black uppercase text-gray-500">Loading...</p>
-          ) : overview.latestFeedback.length === 0 ? (
-            <p className="text-xs font-black uppercase text-gray-500">No feedback yet.</p>
+            <p className="text-[14px] text-ink-soft">No runs yet.</p>
           ) : (
-            <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+            <ul className="max-h-60 divide-y divide-ink/10 overflow-auto border-t border-ink/10">
+              {agentJobs.map((job) => (
+                <li key={job.id} className="flex flex-wrap items-center gap-2 py-2.5">
+                  <span className="text-[13px] font-bold tabular-nums">#{job.id}</span>
+                  <span
+                    className={clsx(
+                      'chip capitalize',
+                      job.status === 'completed'
+                        ? 'bg-surface-yellow'
+                        : job.status === 'failed'
+                          ? 'bg-surface-rose'
+                          : 'bg-surface-amber'
+                    )}
+                  >
+                    {job.status}
+                  </span>
+                  <span className="min-w-[12ch] flex-1 text-[13px] text-ink-soft">
+                    {job.result_summary || job.error_message || 'Processing'}
+                  </span>
+                  <span className="text-[12px] text-ink-faint">
+                    {job.finished_at ? new Date(job.finished_at).toLocaleString() : 'Running'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Disclosure>
+      </section>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <section className="panel lg:col-span-2">
+          <h2 className="text-[1.35rem] leading-none">Raw feedback</h2>
+          {loading ? (
+            <div className="mt-5 space-y-3" aria-busy="true" aria-live="polite">
+              <div className="h-20 rounded-tile bg-paper-grey" />
+              <div className="h-20 rounded-tile bg-paper-grey" />
+              <span className="sr-only">Loading feedback</span>
+            </div>
+          ) : overview.latestFeedback.length === 0 ? (
+            <div className="mt-5 rounded-tile bg-paper-warm px-6 py-10 text-center">
+              <p className="text-[15px] font-bold">No feedback yet</p>
+              <p className="mx-auto mt-1.5 max-w-[36ch] text-[14px] text-ink-soft">
+                Submissions from the feedback page land here first.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 max-h-[360px] divide-y divide-ink/10 overflow-auto border-t border-ink/10">
               {overview.latestFeedback.map((item) => (
-                <article key={item.id} className="rounded-xl border-[2px] border-black p-3 bg-[#FFFDF7] dark:bg-slate-800 flex items-start gap-3" style={{ boxShadow: '2px 2px 0px 0px #000' }}>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 rounded border border-black text-[10px] font-black uppercase" style={{ backgroundColor: '#FFD803' }}>{item.category}</span>
-                      <span className="text-[10px] font-black uppercase text-gray-500">{item.rating}/5</span>
-                      <span className="text-[10px] font-black text-gray-400">{new Date(item.created_at).toLocaleDateString()}</span>
+                <li key={item.id} className="flex items-start gap-4 py-3.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="chip capitalize">{item.category}</span>
+                      <span className="text-[12px] text-ink-faint">
+                        {item.rating}/5 · {new Date(item.created_at).toLocaleDateString()}
+                      </span>
                     </div>
-                    <p className="text-xs font-medium text-black dark:text-slate-100 mb-0.5">{item.comment}</p>
-                    <p className="text-[10px] font-black uppercase text-gray-400">{item.user_email || 'Unknown'}</p>
+                    <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{item.comment}</p>
+                    <p className="mt-1 truncate text-[12px] text-ink-faint">
+                      {item.user_email || 'Unknown'}
+                    </p>
                   </div>
                   <button
                     onClick={() => toggleReviewed(item.id, !item.reviewed)}
                     disabled={updatingId === item.id}
-                    className="shrink-0 px-2 py-1 rounded-lg border-[2px] border-black text-[10px] font-black uppercase"
-                    style={{
-                      backgroundColor: item.reviewed ? '#86EFAC' : '#FFB4A2',
-                      color: '#000',
-                      boxShadow: '1px 1px 0px 0px #000',
-                      opacity: updatingId === item.id ? 0.6 : 1,
-                    }}
+                    className={clsx(
+                      'flex-shrink-0 px-4 py-2 text-[12px]',
+                      item.reviewed ? 'btn-ghost' : 'btn-primary'
+                    )}
                   >
-                    {updatingId === item.id ? '...' : item.reviewed ? 'Reviewed' : 'Review'}
+                    {updatingId === item.id ? 'Saving' : item.reviewed ? 'Reviewed' : 'Review'}
                   </button>
-                </article>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </section>
 
         <div className="space-y-4">
-          <section className="card">
-            <h2 className="text-sm font-black uppercase text-black dark:text-slate-100 mb-2">Admin Access</h2>
-            <div className="flex gap-2 mb-2">
-              <input
-                value={newAdminEmail}
-                onChange={(e) => setNewAdminEmail(e.target.value)}
-                type="email"
-                placeholder="admin@email.com"
-                className="neo-input text-xs"
-              />
-              <button onClick={handleAddAdmin} disabled={adminActionLoading} className="btn-primary px-2 py-1 text-[10px] inline-flex items-center gap-1">
-                <UserPlus size={12} /> Add
-              </button>
+          <section className="panel">
+            <h2 className="text-[1.1rem] leading-none">Admin access</h2>
+            <div className="mt-4">
+              <label htmlFor="admin-email" className="field-label">
+                Add an admin
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="admin-email"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  type="email"
+                  placeholder="admin@email.com"
+                  className="field"
+                />
+                <button
+                  onClick={handleAddAdmin}
+                  disabled={adminActionLoading || !newAdminEmail.trim()}
+                  className="btn-primary flex-shrink-0 px-4 py-2.5 text-[13px]"
+                >
+                  <UserPlus size={14} strokeWidth={2} /> Add
+                </button>
+              </div>
+              {adminActionNotice && (
+                <p role="status" className="field-hint">
+                  {adminActionNotice}
+                </p>
+              )}
             </div>
-            {adminActionNotice && (
-              <p className="text-[10px] font-black uppercase text-black dark:text-slate-100 mb-2">{adminActionNotice}</p>
-            )}
-            <div className="space-y-1 max-h-40 overflow-auto">
+            <ul className="mt-4 max-h-44 divide-y divide-ink/10 overflow-auto border-t border-ink/10">
               {adminEmails.map((email) => (
-                <div key={email} className="flex items-center justify-between gap-1 rounded-lg border border-black px-2 py-1 bg-white dark:bg-slate-800">
-                  <p className="text-[10px] font-black text-black dark:text-slate-100 truncate">{email}</p>
-                  <button
-                    onClick={() => handleRemoveAdmin(email)}
-                    disabled={adminActionLoading || email === '30may1991@gmail.com'}
-                    className="shrink-0 text-[10px] font-black uppercase text-red-600 hover:text-red-800"
-                  >
-                    {email === '30may1991@gmail.com' ? '' : <Trash2 size={10} />}
-                  </button>
-                </div>
+                <li key={email} className="flex items-center justify-between gap-2 py-2.5">
+                  <span className="truncate text-[13px] font-semibold">{email}</span>
+                  {email !== PRIMARY_ADMIN && (
+                    <button
+                      onClick={() => handleRemoveAdmin(email)}
+                      disabled={adminActionLoading}
+                      aria-label={`Remove ${email}`}
+                      className="flex-shrink-0 rounded-full p-1.5 text-ink-faint transition-colors hover:bg-paper-grey hover:text-wine"
+                    >
+                      <Trash2 size={14} strokeWidth={2} />
+                    </button>
+                  )}
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
 
-          <section className="card">
-            <h2 className="text-sm font-black uppercase text-black dark:text-slate-100 mb-2">Top Users (7d)</h2>
+          <section className="panel">
+            <h2 className="text-[1.1rem] leading-none">Top users (7d)</h2>
             {overview.topUsers.length === 0 ? (
-              <p className="text-[10px] font-black uppercase text-gray-500">No data.</p>
+              <p className="mt-4 text-[14px] text-ink-soft">No data for this window.</p>
             ) : (
-              <div className="space-y-1">
+              <ul className="mt-4 divide-y divide-ink/10 border-t border-ink/10">
                 {overview.topUsers.slice(0, 5).map((item) => (
-                  <div key={item.email} className="flex items-center justify-between gap-1 rounded-lg border border-black px-2 py-1 bg-white dark:bg-slate-800">
-                    <p className="text-[10px] font-black text-black dark:text-slate-100 truncate">{item.email}</p>
-                    <span className="text-[10px] font-black text-emerald-700">{item.views}</span>
-                  </div>
+                  <li key={item.email} className="flex items-center justify-between gap-2 py-2.5">
+                    <span className="truncate text-[13px] font-semibold">{item.email}</span>
+                    <span className="text-[13px] font-bold tabular-nums text-violet-500">
+                      {item.views}
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ul>
             )}
           </section>
         </div>
       </div>
 
-      <section className="card mt-6 bg-[#E6F6FF] dark:bg-slate-900">
-        <div className="flex items-start justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-lg md:text-xl font-black uppercase text-black dark:text-slate-100">Architecture & Cost Learning Board</h2>
-            <p className="text-xs font-black uppercase text-gray-700 dark:text-slate-400 mt-1">Beginner friendly + architect level in one place</p>
-          </div>
-          <span className="badge" style={{ backgroundColor: '#B5FF3C', color: '#000' }}>Version 1 (Local)</span>
-        </div>
+      <section className="panel mt-4 md:p-8">
+        <h2 className="text-[1.5rem] leading-none">Architecture and cost board</h2>
+        <p className="mt-2 max-w-[58ch] text-[14px] leading-relaxed text-ink-soft">
+          The same system explained twice: once plainly, once for an architect.
+        </p>
 
-        <details open className="rounded-xl border-[3px] border-black mb-3 bg-[#FFFDF7] dark:bg-slate-800" style={{ boxShadow: '2px 2px 0px 0px #000' }}>
-          <summary className="list-none cursor-pointer px-3 py-3 flex items-center justify-between">
-            <span className="text-xs md:text-sm font-black uppercase tracking-wide text-black dark:text-slate-100">Full system diagram</span>
-            <ChevronDown size={16} className="text-black dark:text-slate-100" />
-          </summary>
-          <div className="px-3 pb-3">
-            <pre className="rounded-lg border-[2px] border-black p-3 text-[11px] md:text-xs font-black text-black dark:text-slate-100 overflow-x-auto bg-[#F8FAFC] dark:bg-slate-900">
+        <div className="mt-6">
+          <Disclosure title="Full system diagram" open>
+            <pre className="overflow-x-auto rounded-tile bg-paper-warm p-4 font-mono text-[11px] leading-relaxed md:text-[12px]">
               {APP_FLOW_DIAGRAM}
             </pre>
-          </div>
-        </details>
+          </Disclosure>
 
-        {ARCHITECTURE_TOPICS.map((topic) => (
-          <details key={topic.title} className="rounded-xl border-[3px] border-black mb-3 bg-[#FFFDF7] dark:bg-slate-800" style={{ boxShadow: '2px 2px 0px 0px #000' }}>
-            <summary className="list-none cursor-pointer px-3 py-3 flex items-center justify-between">
-              <span className="text-xs md:text-sm font-black uppercase tracking-wide text-black dark:text-slate-100">{topic.title}</span>
-              <ChevronDown size={16} className="text-black dark:text-slate-100" />
-            </summary>
-            <div className="px-3 pb-3 grid md:grid-cols-2 gap-3">
-              <div className="rounded-lg border-[2px] border-black p-3 bg-[#FEF3C7] dark:bg-slate-900">
-                <p className="text-[11px] font-black uppercase tracking-wide text-black dark:text-slate-100 mb-1">Explain like I am 15</p>
-                <p className="text-sm text-black dark:text-slate-100 font-medium">{topic.teen}</p>
-              </div>
-              <div className="rounded-lg border-[2px] border-black p-3 bg-[#DBEAFE] dark:bg-slate-800">
-                <p className="text-[11px] font-black uppercase tracking-wide text-black dark:text-slate-100 mb-1">Cloud architect view</p>
-                <p className="text-sm text-black dark:text-slate-100 font-medium">{topic.architect}</p>
-              </div>
-              <div className="md:col-span-2 rounded-lg border-[2px] border-black p-3 bg-[#ECFCCB] dark:bg-slate-900">
-                <p className="text-[11px] font-black uppercase tracking-wide text-black dark:text-slate-100 mb-2">Key points</p>
-                <ul className="grid md:grid-cols-2 gap-2">
+          {ARCHITECTURE_TOPICS.map((topic) => (
+            <Disclosure key={topic.title} title={topic.title}>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-tile bg-surface-yellow p-4">
+                  <span className="eyebrow">Explain it plainly</span>
+                  <p className="mt-2 text-[14px] leading-relaxed">{topic.teen}</p>
+                </div>
+                <div className="rounded-tile bg-surface-blue p-4">
+                  <span className="eyebrow">Architect view</span>
+                  <p className="mt-2 text-[14px] leading-relaxed">{topic.architect}</p>
+                </div>
+                <ul className="grid gap-2 md:col-span-2 md:grid-cols-2">
                   {topic.points.map((point) => (
-                    <li key={point} className="text-xs font-black text-black dark:text-slate-100">• {point}</li>
+                    <li key={point} className="text-[13px] text-ink-soft">
+                      {point}
+                    </li>
                   ))}
                 </ul>
               </div>
-            </div>
-          </details>
-        ))}
+            </Disclosure>
+          ))}
 
-        <details className="rounded-xl border-[3px] border-black bg-[#FFFDF7] dark:bg-slate-800" style={{ boxShadow: '2px 2px 0px 0px #000' }}>
-          <summary className="list-none cursor-pointer px-3 py-3 flex items-center justify-between">
-            <span className="text-xs md:text-sm font-black uppercase tracking-wide text-black dark:text-slate-100">Cost snapshot (MVP estimate)</span>
-            <ChevronDown size={16} className="text-black dark:text-slate-100" />
-          </summary>
-          <div className="px-3 pb-3">
-            <div className="rounded-lg border-[2px] border-black overflow-hidden bg-white dark:bg-slate-900">
+          <Disclosure title="Cost snapshot (MVP estimate)">
+            <ul className="divide-y divide-ink/10 border-t border-ink/10">
               {COST_LINES.map((line) => (
-                <div key={line.item} className="grid md:grid-cols-3 gap-2 px-3 py-2 border-b border-black/20 last:border-b-0">
-                  <p className="text-xs font-black uppercase text-black dark:text-slate-100">{line.item}</p>
-                  <p className="text-xs font-black text-black dark:text-slate-100">{line.estimate}</p>
-                  <p className="text-xs font-medium text-gray-800 dark:text-slate-300">{line.detail}</p>
-                </div>
+                <li key={line.item} className="grid gap-1 py-3 md:grid-cols-[1fr_auto_1.4fr] md:gap-4">
+                  <span className="text-[14px] font-bold">{line.item}</span>
+                  <span className="text-[14px] font-bold tabular-nums text-violet-500">
+                    {line.estimate}
+                  </span>
+                  <span className="text-[13px] text-ink-soft">{line.detail}</span>
+                </li>
               ))}
-            </div>
-          </div>
-        </details>
+            </ul>
+          </Disclosure>
+        </div>
       </section>
     </div>
   );

@@ -1,47 +1,83 @@
 /** @type {import('tailwindcss').Config} */
+
+/*
+ * FitIn design language — "editorial playful".
+ * Direction borrowed from aardvarkbookclub.com: white paper base, pale-yellow
+ * feature panels, one locked violet accent, chunky display serif, pill geometry.
+ * Palette values are taken verbatim from that site's published CSS variables.
+ *
+ * ACCENT LOCK: `violet` (#3B308F) is the only accent. Every CTA, active state,
+ * focus ring and progress fill uses it. The pastel `surface.*` values are fills
+ * for categorical distinction only (muscle groups, meal times, macros) and must
+ * never be used as a call to action.
+ *
+ * SHAPE LOCK: buttons/pills/chips = full radius. Panels = 24px. Inputs = 16px.
+ * Inner tiles = 16px. Nothing else.
+ */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
+        ink: {
+          DEFAULT: '#141414',
+          soft: '#4A4744',
+          faint: '#8A8681',
         },
-        neo: {
-          yellow: '#FFD803',
-          pink: '#FF6B9D',
-          blue: '#00B4D8',
-          purple: '#A855F7',
-          orange: '#FF8C42',
-          lime: '#B5FF3C',
-          red: '#FF4444',
-          bg: '#FFFDF7',
+        paper: {
+          DEFAULT: '#FFFFFF',
+          warm: '#FBFAF6',
+          grey: '#F2F2F2',
         },
+        // Locked accent ramp.
+        violet: {
+          50: '#F1EFFA',
+          100: '#D7CDF1',
+          200: '#C2B4EB',
+          300: '#9982DE',
+          500: '#3B308F',
+          600: '#312876',
+          700: '#26205C',
+        },
+        // Categorical surface fills. Never a CTA.
+        surface: {
+          yellow: '#FAED8F',
+          gold: '#FFD24A',
+          blue: '#DDFCFC',
+          cyan: '#A4F6F8',
+          pink: '#FFDBFD',
+          rose: '#FEB6FA',
+          orange: '#FDDAA6',
+          amber: '#FBBE63',
+          periwinkle: '#D7CDF1',
+        },
+        wine: '#670A2E',
+        olive: '#857521',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['"Young Serif"', 'Georgia', 'serif'],
+        sans: ['Figtree', 'system-ui', 'sans-serif'],
+        hand: ['Caveat', 'cursive'],
+      },
+      borderRadius: {
+        panel: '24px',
+        field: '16px',
+        tile: '16px',
       },
       boxShadow: {
-        'neo': '4px 4px 0px 0px #000000',
-        'neo-sm': '2px 2px 0px 0px #000000',
-        'neo-lg': '6px 6px 0px 0px #000000',
-        'neo-xl': '8px 8px 0px 0px #000000',
-        'neo-brand': '4px 4px 0px 0px #16a34a',
-        'neo-hover': '2px 2px 0px 0px #000000',
+        // Tinted to the warm paper base, never pure black.
+        lift: '0 2px 6px -2px rgba(20, 20, 20, 0.08), 0 12px 28px -12px rgba(20, 20, 20, 0.14)',
+        'lift-lg': '0 4px 10px -3px rgba(20, 20, 20, 0.10), 0 24px 48px -20px rgba(20, 20, 20, 0.20)',
+        focus: '0 0 0 3px rgba(59, 48, 143, 0.22)',
       },
-      borderWidth: {
-        '3': '3px',
+      keyframes: {
+        rise: {
+          from: { opacity: '0', transform: 'translateY(14px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        rise: 'rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

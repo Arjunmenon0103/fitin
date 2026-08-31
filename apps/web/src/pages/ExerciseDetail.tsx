@@ -1,17 +1,18 @@
-import { ArrowLeft, Dumbbell, Target, BarChart3, ListChecks } from 'lucide-react';
+import { ArrowLeft, Dumbbell } from 'lucide-react';
 import { useState } from 'react';
 import { getExerciseById } from '@fitin/core';
 import { clsx } from 'clsx';
+import { muscleFill } from '../lib/muscleFills';
 
 interface ExerciseDetailProps {
   exerciseId: string;
   onBack: () => void;
 }
 
-const DIFFICULTY_STYLES: Record<string, React.CSSProperties> = {
-  beginner: { backgroundColor: '#B5FF3C', color: '#000' },
-  intermediate: { backgroundColor: '#FFD803', color: '#000' },
-  advanced: { backgroundColor: '#FF4444', color: '#fff' },
+const DIFFICULTY_FILLS: Record<string, string> = {
+  beginner: 'bg-surface-cyan',
+  intermediate: 'bg-surface-gold',
+  advanced: 'bg-surface-rose',
 };
 
 const EXERCISE_VIDEO_BY_ID: Record<string, string> = {
@@ -64,116 +65,117 @@ export default function ExerciseDetail({ exerciseId, onBack }: ExerciseDetailPro
 
   if (!exercise) {
     return (
-      <div className="px-4 py-6 text-center">
-        <p className="text-gray-400 font-bold text-lg">Exercise not found</p>
-        <button onClick={onBack} className="btn-primary mt-4">Go Back</button>
+      <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-10">
+        <div className="rounded-panel bg-paper-warm px-6 py-14 text-center">
+          <p className="font-display text-[1.5rem] leading-none">We lost that exercise</p>
+          <p className="mx-auto mt-2 max-w-[36ch] text-[14px] text-ink-soft">
+            It is no longer in the library. Head back and pick another lift.
+          </p>
+          <button onClick={onBack} className="btn-primary mt-6">
+            Back to plan
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-10 max-w-3xl mx-auto">
-      {/* Back Button */}
+    <div className="mx-auto max-w-3xl px-4 py-6 md:px-8 md:py-10">
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-black font-black uppercase tracking-wide hover:text-brand-600 mb-6 transition-colors"
+        className="rise inline-flex items-center gap-2 text-[13px] font-bold text-ink-soft transition-colors hover:text-ink"
       >
-        <ArrowLeft size={22} strokeWidth={3} />
-        <span className="text-sm">Back to plan</span>
+        <ArrowLeft size={16} strokeWidth={2} /> Back to plan
       </button>
 
-      {/* Exercise Header */}
-      <div className="card mb-6">
-        <h1 className="text-3xl font-black text-black mb-3 uppercase tracking-tight">{exercise.name}</h1>
-        <div className="flex flex-wrap gap-2 mb-5">
-          <span className="badge" style={DIFFICULTY_STYLES[exercise.difficulty] || DIFFICULTY_STYLES.beginner}>
+      <header className="rise mt-5" style={{ '--i': 1 } as React.CSSProperties}>
+        <h1 className="max-w-[18ch] text-[2rem] leading-[0.95] md:text-[2.75rem]">
+          {exercise.name}
+        </h1>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <span
+            className={clsx(
+              'chip capitalize',
+              DIFFICULTY_FILLS[exercise.difficulty] ?? DIFFICULTY_FILLS.beginner
+            )}
+          >
             {exercise.difficulty}
           </span>
-          <span className="badge" style={{ backgroundColor: '#00B4D8', color: '#000' }}>
-            {exercise.equipment}
+          <span className="chip-outline capitalize">{exercise.equipment}</span>
+          <span className={clsx('chip capitalize', muscleFill(exercise.muscleGroup))}>
+            {exercise.muscleGroup}
           </span>
         </div>
+      </header>
 
-        {/* Exercise Video */}
-        <div className="rounded-xl border-[3px] border-black overflow-hidden" style={{ backgroundColor: '#FFFDF7', boxShadow: '4px 4px 0px 0px #000' }}>
-          {!mediaError ? (
-            <iframe
-              key={exercise.id}
-              src={buildEmbedUrl(getVideoId(exercise.id, exercise.muscleGroup))}
-              title={`${exercise.name} demonstration`}
-              className="w-full h-64"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              onError={() => setMediaError(true)}
-            />
-          ) : (
-            <div className="w-full h-64 flex flex-col items-center justify-center gap-3" style={{ backgroundColor: '#FFFDF7' }}>
-              <Dumbbell size={48} className="text-gray-300" strokeWidth={2} />
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                {exercise.muscleGroup} exercise
-              </p>
-            </div>
-          )}
-          <div className="px-4 py-3 border-t-[3px] border-black" style={{ backgroundColor: '#FFD803' }}>
-            <p className="text-xs font-black text-black uppercase tracking-widest text-center">
-              {exercise.muscleGroup} — {exercise.equipment}
+      <div
+        className="rise mt-6 overflow-hidden rounded-panel border border-ink/10 bg-paper-warm"
+        style={{ '--i': 2 } as React.CSSProperties}
+      >
+        {!mediaError ? (
+          <iframe
+            key={exercise.id}
+            src={buildEmbedUrl(getVideoId(exercise.id, exercise.muscleGroup))}
+            title={`${exercise.name} demonstration`}
+            className="aspect-video w-full"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            onError={() => setMediaError(true)}
+          />
+        ) : (
+          <div className="flex aspect-video w-full flex-col items-center justify-center gap-3">
+            <Dumbbell size={28} className="text-ink-faint" strokeWidth={1.75} />
+            <p className="text-[14px] font-bold text-ink-soft">Demo unavailable right now</p>
+            <p className="max-w-[34ch] text-center text-[13px] text-ink-faint">
+              The steps below carry the full movement.
             </p>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Muscles Worked */}
-      <div className="card mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Target size={20} className="text-brand-600" strokeWidth={3} />
-          <h2 className="font-black text-lg text-black uppercase">Muscles Worked</h2>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="badge" style={{ backgroundColor: '#22c55e', color: '#fff' }}>
-            {exercise.muscleGroup} (primary)
-          </span>
-          {exercise.secondaryMuscles.map((m) => (
-            <span key={m} className="badge" style={{ backgroundColor: '#FFD803', color: '#000' }}>
-              {m}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Default Sets & Reps */}
-      <div className="card mb-4">
-        <div className="flex items-center gap-2 mb-4">
-          <BarChart3 size={20} className="text-brand-600" strokeWidth={3} />
-          <h2 className="font-black text-lg text-black uppercase">Recommended Volume</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border-[3px] border-black p-5 text-center" style={{ backgroundColor: '#B5FF3C', boxShadow: '2px 2px 0px 0px #000' }}>
-            <p className="text-4xl font-black text-black">{exercise.defaultSets}</p>
-            <p className="text-xs font-bold text-gray-700 mt-1 uppercase">Sets</p>
+      <div
+        className="rise mt-4 grid gap-4 md:mt-6 md:grid-cols-[0.9fr_1.1fr] md:gap-6"
+        style={{ '--i': 3 } as React.CSSProperties}
+      >
+        <div className="space-y-4">
+          <div className="rounded-panel bg-surface-yellow p-7">
+            <span className="eyebrow">Recommended volume</span>
+            <p className="mt-4 font-display text-[3rem] leading-[0.9]">
+              {exercise.defaultSets}
+              <span className="mx-1.5 text-ink-soft">&times;</span>
+              {exercise.defaultReps}
+            </p>
+            <p className="mt-2 text-[14px] text-ink-soft">sets by reps</p>
           </div>
-          <div className="rounded-xl border-[3px] border-black p-5 text-center" style={{ backgroundColor: '#00B4D8', boxShadow: '2px 2px 0px 0px #000' }}>
-            <p className="text-4xl font-black text-black">{exercise.defaultReps}</p>
-            <p className="text-xs font-bold text-black/70 mt-1 uppercase">Reps</p>
-          </div>
-        </div>
-      </div>
 
-      {/* Instructions */}
-      <div className="card">
-        <div className="flex items-center gap-2 mb-4">
-          <ListChecks size={20} className="text-brand-600" strokeWidth={3} />
-          <h2 className="font-black text-lg text-black uppercase">Step-by-Step</h2>
-        </div>
-        <ol className="space-y-3">
-          {exercise.instructions.map((step, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="flex-shrink-0 w-8 h-8 rounded-lg border-2 border-black text-sm font-black flex items-center justify-center" style={{ backgroundColor: '#FFD803', boxShadow: '2px 2px 0px 0px #000' }}>
-                {i + 1}
+          <div className="panel">
+            <h2 className="text-[1.1rem] leading-none">Muscles worked</h2>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              <span className={clsx('chip capitalize', muscleFill(exercise.muscleGroup))}>
+                {exercise.muscleGroup} (primary)
               </span>
-              <p className="text-sm font-medium text-gray-800 leading-relaxed pt-1">{step}</p>
-            </li>
-          ))}
-        </ol>
+              {exercise.secondaryMuscles.map((m) => (
+                <span key={m} className="chip-outline capitalize">
+                  {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <section className="panel">
+          <h2 className="text-[1.1rem] leading-none">Step by step</h2>
+          <ol className="mt-4 divide-y divide-ink/10 border-t border-ink/10">
+            {exercise.instructions.map((step, i) => (
+              <li key={i} className="flex gap-4 py-3.5">
+                <span className="flex-shrink-0 font-display text-[17px] text-ink-faint">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <p className="text-[14px] leading-relaxed text-ink-soft">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
     </div>
   );

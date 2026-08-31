@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { clsx } from 'clsx';
 import { getMyFeedback, submitFeedback } from '../lib/db';
 import { useAuthStore } from '../store/authStore';
 
@@ -24,15 +25,18 @@ export default function Feedback() {
   const [rating, setRating] = useState(4);
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [loadingEntries, setLoadingEntries] = useState(true);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [entries, setEntries] = useState<any[]>([]);
 
   const weekStart = useMemo(() => currentWeekStart(), []);
 
   const loadEntries = async () => {
     if (!user) return;
+    setLoadingEntries(true);
     const data = await getMyFeedback(user.id);
     setEntries(data);
+    setLoadingEntries(false);
   };
 
   useEffect(() => {
@@ -56,106 +60,133 @@ export default function Feedback() {
     });
 
     if (error) {
-      setNotice(error);
+      setNotice({ kind: 'error', text: error });
       setSaving(false);
       return;
     }
 
     setComment('');
     setSaving(false);
-    setNotice('Feedback submitted. Thank you — this goes into weekly review.');
+    setNotice({ kind: 'ok', text: 'Submitted. This goes into the weekly review.' });
     await loadEntries();
   };
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-10 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between gap-3 mb-6">
-        <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-black">Feedback</h1>
-        <button onClick={loadEntries} className="btn-secondary py-2 px-4 text-xs flex items-center gap-2">
-          <RefreshCw size={14} /> Refresh
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8 md:py-10">
+      <header className="rise flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow">Week of {weekStart}</span>
+          <h1 className="mt-2 max-w-[18ch] text-[2.25rem] leading-[0.95] md:text-[3rem]">
+            Tell us what is not working.
+          </h1>
+        </div>
+        <button onClick={loadEntries} className="btn-ghost px-4 py-2.5 text-[13px]">
+          <RefreshCw size={14} strokeWidth={2} /> Refresh
         </button>
-      </div>
+      </header>
 
-      <div className="grid md:grid-cols-[0.95fr_1.05fr] gap-4">
-        <form onSubmit={handleSubmit} className="card space-y-3" style={{ backgroundColor: '#FFD803' }}>
-          <div className="inline-flex items-center gap-2">
-            <MessageSquare size={18} className="text-black" />
-            <h2 className="text-sm font-black uppercase tracking-widest text-black">Weekly Product Feedback</h2>
-          </div>
-
-          <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Week starting: {weekStart}</p>
-
-          <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-black">Category</label>
-            <div className="grid grid-cols-2 gap-2">
+      <div
+        className="rise mt-6 grid gap-4 md:grid-cols-[1fr_0.9fr] md:gap-6"
+        style={{ '--i': 1 } as React.CSSProperties}
+      >
+        <form onSubmit={handleSubmit} className="rounded-panel bg-surface-yellow p-7 space-y-5">
+          <fieldset>
+            <legend className="field-label">Category</legend>
+            <div className="mt-1 flex flex-wrap gap-2">
               {CATEGORIES.map((item) => (
                 <button
                   type="button"
                   key={item.id}
                   onClick={() => setCategory(item.id)}
-                  className={`rounded-xl border-[3px] border-black px-3 py-2 text-xs font-black uppercase transition-all ${
-                    category === item.id ? 'bg-brand-500 text-white' : 'bg-white text-black'
-                  }`}
-                  style={{ boxShadow: '2px 2px 0px 0px #000' }}
+                  aria-pressed={category === item.id}
+                  className={clsx('pill', category === item.id && 'pill-on')}
                 >
                   {item.label}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div>
-            <label className="text-xs font-black uppercase tracking-widest text-black">Rating ({rating}/5)</label>
+            <label htmlFor="fb-rating" className="field-label">
+              Rating
+              <span className="ml-2 font-display text-[17px] font-normal text-violet-500">
+                {rating}/5
+              </span>
+            </label>
             <input
+              id="fb-rating"
               type="range"
               min={1}
               max={5}
               value={rating}
               onChange={(e) => setRating(Number(e.target.value))}
-              className="w-full"
+              className="mt-1 w-full accent-violet-500"
             />
           </div>
 
           <div>
-            <label className="text-xs font-black uppercase tracking-widest text-black">What should improve?</label>
+            <label htmlFor="fb-comment" className="field-label">
+              What should improve?
+            </label>
             <textarea
+              id="fb-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={5}
               required
-              className="neo-input resize-none"
-              placeholder="Share bug reports, ideas, missing features, or friction points..."
+              className="field resize-none"
+              placeholder="Bugs, missing features, friction points"
             />
           </div>
 
           {notice && (
-            <div className="rounded-xl border-[3px] border-black px-3 py-2 bg-white">
-              <p className="text-xs font-black uppercase tracking-wide text-black">{notice}</p>
-            </div>
+            <p
+              role="status"
+              className={clsx(
+                'text-[13px] font-semibold',
+                notice.kind === 'error' ? 'text-wine' : 'text-ink-soft'
+              )}
+            >
+              {notice.text}
+            </p>
           )}
 
-          <button type="submit" className="btn-primary w-full" disabled={saving}>
-            {saving ? 'Submitting...' : 'Submit Feedback'}
+          <button type="submit" className="btn-primary w-full" disabled={saving || !comment.trim()}>
+            {saving ? 'Sending' : 'Send feedback'}
           </button>
         </form>
 
-        <section className="card">
-          <h2 className="text-lg font-black uppercase tracking-tight text-black mb-3">My Recent Feedback</h2>
-          {entries.length === 0 ? (
-            <p className="text-xs font-bold text-gray-500 uppercase">No feedback yet. Submit your first one this week.</p>
-          ) : (
-            <div className="space-y-3">
-              {entries.map((item) => (
-                <article key={item.id} className="rounded-xl border-[3px] border-black p-3" style={{ backgroundColor: '#FFFDF7', boxShadow: '2px 2px 0px 0px #000' }}>
-                  <div className="flex items-center justify-between mb-2 gap-2">
-                    <span className="badge" style={{ backgroundColor: '#B5FF3C', color: '#000' }}>{item.category}</span>
-                    <span className="text-[11px] font-black uppercase text-gray-700">{new Date(item.created_at).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-xs font-bold text-gray-700 mb-2 uppercase">Rating: {item.rating}/5</p>
-                  <p className="text-sm font-medium text-black">{item.comment}</p>
-                </article>
-              ))}
+        <section className="panel">
+          <h2 className="text-[1.35rem] leading-none">Your recent notes</h2>
+
+          {loadingEntries ? (
+            <div className="mt-5 space-y-3" aria-busy="true" aria-live="polite">
+              <div className="h-16 rounded-tile bg-paper-grey" />
+              <div className="h-16 rounded-tile bg-paper-grey" />
+              <span className="sr-only">Loading your feedback</span>
             </div>
+          ) : entries.length === 0 ? (
+            <div className="mt-5 rounded-tile bg-paper-warm px-5 py-10 text-center">
+              <p className="text-[15px] font-bold">Nothing yet</p>
+              <p className="mx-auto mt-1.5 max-w-[30ch] text-[14px] text-ink-soft">
+                Your submissions show up here so you can see what you already flagged.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-4 divide-y divide-ink/10 border-t border-ink/10">
+              {entries.map((item) => (
+                <li key={item.id} className="py-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="chip capitalize">{item.category}</span>
+                    <span className="text-[12px] text-ink-faint">
+                      {new Date(item.created_at).toLocaleDateString()} · {item.rating}/5
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[14px] leading-relaxed text-ink-soft">{item.comment}</p>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </div>

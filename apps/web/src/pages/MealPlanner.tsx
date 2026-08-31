@@ -1,89 +1,51 @@
 import { useState, useMemo } from 'react';
-import { RefreshCw, ShoppingCart, Calendar, ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { clsx } from 'clsx';
 import {
-  generateWeeklyMealPlan,
-  buildGroceryList,
-  calculateDailyCalories,
-} from '@fitin/core';
+  ShoppingCart,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Sunrise,
+  Sun,
+  Apple,
+  Moon,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { clsx } from 'clsx';
+import { generateWeeklyMealPlan, buildGroceryList, calculateDailyCalories } from '@fitin/core';
 import type { Region, MealTime, GroceryItem } from '@fitin/core';
 import { useUserStore } from '../store/userStore';
 
-const REGIONS: { id: Region; flag: string; name: string }[] = [
-  { id: 'india', flag: '🇮🇳', name: 'India' },
-  { id: 'germany', flag: '🇩🇪', name: 'Germany' },
-  { id: 'usa', flag: '🇺🇸', name: 'USA' },
+const REGIONS: { id: Region; name: string }[] = [
+  { id: 'india', name: 'India' },
+  { id: 'germany', name: 'Germany' },
+  { id: 'usa', name: 'USA' },
 ];
 
-const MEAL_TIMES: { key: MealTime; label: string; emoji: string; bg: string }[] = [
-  { key: 'breakfast', label: 'Breakfast', emoji: '🌅', bg: '#FFD803' },
-  { key: 'lunch', label: 'Lunch', emoji: '☀️', bg: '#FF8C42' },
-  { key: 'snack', label: 'Snack', emoji: '🍎', bg: '#B5FF3C' },
-  { key: 'dinner', label: 'Dinner', emoji: '🌙', bg: '#A855F7' },
+/* Meal-time fills are categorical, never a call to action. */
+const MEAL_TIMES: { key: MealTime; label: string; icon: LucideIcon; fill: string }[] = [
+  { key: 'breakfast', label: 'Breakfast', icon: Sunrise, fill: 'bg-surface-gold' },
+  { key: 'lunch', label: 'Lunch', icon: Sun, fill: 'bg-surface-orange' },
+  { key: 'snack', label: 'Snack', icon: Apple, fill: 'bg-surface-cyan' },
+  { key: 'dinner', label: 'Dinner', icon: Moon, fill: 'bg-surface-periwinkle' },
 ];
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const CALORIE_PRESETS = [
-  { value: 1500, label: 'CUT', bg: '#FF6B9D' },
-  { value: 2000, label: 'MAINTAIN', bg: '#FFD803' },
-  { value: 2500, label: 'BULK', bg: '#00B4D8' },
-  { value: 3000, label: 'HARD BULK', bg: '#B5FF3C' },
+  { value: 1500, label: 'Cut' },
+  { value: 2000, label: 'Maintain' },
+  { value: 2500, label: 'Bulk' },
+  { value: 3000, label: 'Hard bulk' },
 ];
 
 type Tab = 'week' | 'grocery';
 
-// Grocery item emoji icons — adapted from existing grocery list app
-function groceryIcon(name: string): string {
-  const t = name.toLowerCase();
-  if (/tomato/.test(t)) return '🍅';
-  if (/onion/.test(t)) return '🧅';
-  if (/potato|sweet potato/.test(t)) return '🥔';
-  if (/banana/.test(t)) return '🍌';
-  if (/apple/.test(t)) return '🍎';
-  if (/cucumber/.test(t)) return '🥒';
-  if (/broccoli/.test(t)) return '🥦';
-  if (/bell pepper|pepper/.test(t)) return '🫑';
-  if (/carrot/.test(t)) return '🥕';
-  if (/chicken/.test(t)) return '🍗';
-  if (/fish|salmon|tuna/.test(t)) return '🐟';
-  if (/beef|pork|bratwurst/.test(t)) return '🥩';
-  if (/egg/.test(t)) return '🥚';
-  if (/tofu|paneer|cheese|quark|feta/.test(t)) return '🧀';
-  if (/milk|yogurt|cream|buttermilk|curd|skyr/.test(t)) return '🥛';
-  if (/rice|flour|bread|oat|wheat|roti|muesli|quinoa|semolina/.test(t)) return '🌾';
-  if (/oil|ghee|butter/.test(t)) return '🧴';
-  if (/lentil|dal|bean|chick|sprout|moong|rajma|chole/.test(t)) return '🫘';
-  if (/nut|almond|peanut|cashew|walnut|makhana/.test(t)) return '🥜';
-  if (/honey|jaggery|sugar|dates/.test(t)) return '🍯';
-  if (/salt|pepper|masala|turmeric|cumin|mustard|spice|sauerkraut/.test(t)) return '🧂';
-  if (/greens|spinach|lettuce|salad/.test(t)) return '🥬';
-  if (/avocado/.test(t)) return '🥑';
-  if (/lemon|lime/.test(t)) return '🍋';
-  if (/berr/.test(t)) return '🫐';
-  return '🛒';
-}
-
-function categoryIcon(cat: string): string {
-  const c = cat.toLowerCase();
-  if (/protein/.test(c)) return '🍗';
-  if (/grain/.test(c)) return '🌾';
-  if (/vegetable|produce/.test(c)) return '🥬';
-  if (/fruit/.test(c)) return '🍎';
-  if (/dairy/.test(c)) return '🧀';
-  if (/fat|oil/.test(c)) return '🫒';
-  if (/snack|nut/.test(c)) return '🥜';
-  if (/condiment|spice/.test(c)) return '🧂';
-  if (/prepared/.test(c)) return '🍱';
-  return '🛒';
-}
-
 export default function MealPlanner() {
   const profile = useUserStore((s) => s.profile);
-  const isOnboarded = useUserStore((s) => s.isOnboarded);
 
-  // Auto-populate from profile if onboarded
+  // Auto-populate from profile if onboarded.
   const defaultRegion: Region = profile?.region || 'india';
   const defaultCalories = profile ? calculateDailyCalories(profile) : 2000;
 
@@ -93,20 +55,13 @@ export default function MealPlanner() {
   const [tab, setTab] = useState<Tab>('week');
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
 
-  const weekPlan = useMemo(
-    () => generateWeeklyMealPlan(region, calories),
-    [region, calories]
-  );
-
-  const groceryList = useMemo(
-    () => buildGroceryList(weekPlan),
-    [weekPlan]
-  );
+  const weekPlan = useMemo(() => generateWeeklyMealPlan(region, calories), [region, calories]);
+  const groceryList = useMemo(() => buildGroceryList(weekPlan), [weekPlan]);
 
   const today = weekPlan.days[selectedDay];
 
   const toggleGrocery = (name: string) => {
-    setCheckedItems(prev => {
+    setCheckedItems((prev) => {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else next.add(name);
@@ -123,93 +78,92 @@ export default function MealPlanner() {
     return groups;
   }, [groceryList]);
 
+  const allChecked = groceryList.length > 0 && checkedItems.size === groceryList.length;
+
   return (
-    <div className="px-4 py-6 md:px-8 md:py-10 max-w-5xl mx-auto">
-      {/* Header */}
-      <h1 className="text-3xl md:text-4xl font-black text-black uppercase tracking-tight mb-1">
-        Meal Planner
-      </h1>
-      <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-6">
-        Plan your whole week &bull; Get your grocery list
-      </p>
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-10">
+      <header className="rise">
+        <span className="eyebrow">Seven days</span>
+        <h1 className="mt-2 max-w-[18ch] text-[2.25rem] leading-[0.95] md:text-[3rem]">
+          A week of food, and the list to shop it.
+        </h1>
+      </header>
 
-      {/* Region Selector */}
-      <div className="mb-6">
-        <label className="block text-xs font-black text-black uppercase tracking-widest mb-3">Region</label>
-        <div className="grid grid-cols-3 gap-3">
-          {REGIONS.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRegion(r.id)}
-              className={clsx(
-                'p-4 rounded-xl text-center transition-all duration-150 border-3 border-black',
-                region === r.id
-                  ? 'bg-brand-500 text-white shadow-neo scale-[1.02]'
-                  : 'bg-white shadow-neo-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]'
-              )}
-            >
-              <span className="text-3xl block mb-1">{r.flag}</span>
-              <span className="text-xs font-black uppercase tracking-wider">{r.name}</span>
-            </button>
-          ))}
+      {/* Controls: region and calorie target. */}
+      <div
+        className="rise mt-6 grid gap-4 rounded-panel bg-paper-warm p-5 md:grid-cols-2 md:gap-8 md:p-6"
+        style={{ '--i': 1 } as React.CSSProperties}
+      >
+        <fieldset>
+          <legend className="field-label">Cuisine</legend>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {REGIONS.map((r) => (
+              <button
+                key={r.id}
+                onClick={() => setRegion(r.id)}
+                aria-pressed={region === r.id}
+                className={clsx('pill', region === r.id && 'pill-on')}
+              >
+                {r.name}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div>
+          <label htmlFor="calorie-target" className="field-label">
+            Daily target
+            <span className="ml-2 font-display text-[17px] font-normal text-violet-500">
+              {calories} kcal
+            </span>
+          </label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {CALORIE_PRESETS.map((cp) => (
+              <button
+                key={cp.value}
+                onClick={() => setCalories(cp.value)}
+                aria-pressed={calories === cp.value}
+                className={clsx('pill', calories === cp.value && 'pill-on')}
+              >
+                {cp.label}
+              </button>
+            ))}
+          </div>
+          <input
+            id="calorie-target"
+            type="range"
+            min={1200}
+            max={4000}
+            step={50}
+            value={calories}
+            onChange={(e) => setCalories(Number(e.target.value))}
+            className="mt-4 w-full accent-violet-500"
+          />
         </div>
       </div>
 
-      {/* Calorie Presets */}
-      <div className="mb-6">
-        <label className="block text-xs font-black text-black uppercase tracking-widest mb-3">
-          Daily target: <span className="text-brand-600">{calories} kcal</span>
-        </label>
-        <div className="flex flex-wrap gap-2 mb-3">
-          {CALORIE_PRESETS.map((cp) => (
-            <button
-              key={cp.value}
-              onClick={() => setCalories(cp.value)}
-              className={clsx(
-                'px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider border-2 border-black transition-all duration-150',
-                calories === cp.value
-                  ? 'shadow-neo-sm'
-                  : 'bg-white hover:shadow-neo-sm'
-              )}
-              style={calories === cp.value ? { backgroundColor: cp.bg } : undefined}
-            >
-              {cp.label}
-            </button>
-          ))}
-        </div>
-        <input
-          type="range"
-          min={1200}
-          max={4000}
-          step={50}
-          value={calories}
-          onChange={(e) => setCalories(Number(e.target.value))}
-          className="w-full accent-brand-500"
-        />
-      </div>
-
-      {/* Tab Selector */}
-      <div className="flex gap-2 mb-6">
+      <div
+        className="rise mt-5 flex gap-2 border-b border-ink/10 pb-3"
+        role="tablist"
+        aria-label="Meal plan views"
+        style={{ '--i': 2 } as React.CSSProperties}
+      >
         <button
+          role="tab"
+          aria-selected={tab === 'week'}
           onClick={() => setTab('week')}
-          className={clsx(
-            'flex items-center gap-2 px-5 py-3 rounded-xl font-black uppercase text-sm tracking-wide border-3 border-black transition-all duration-150',
-            tab === 'week' ? 'shadow-neo-sm' : 'bg-white hover:shadow-neo-sm'
-          )}
-          style={tab === 'week' ? { backgroundColor: '#FFD803' } : undefined}
+          className={clsx('pill', tab === 'week' && 'pill-on')}
         >
-          <Calendar size={18} strokeWidth={3} /> Weekly Plan
+          <CalendarDays size={15} strokeWidth={2} /> Weekly plan
         </button>
         <button
+          role="tab"
+          aria-selected={tab === 'grocery'}
           onClick={() => setTab('grocery')}
-          className={clsx(
-            'flex items-center gap-2 px-5 py-3 rounded-xl font-black uppercase text-sm tracking-wide border-3 border-black transition-all duration-150',
-            tab === 'grocery' ? 'shadow-neo-sm' : 'bg-white hover:shadow-neo-sm'
-          )}
-          style={tab === 'grocery' ? { backgroundColor: '#B5FF3C' } : undefined}
+          className={clsx('pill', tab === 'grocery' && 'pill-on')}
         >
-          <ShoppingCart size={18} strokeWidth={3} /> Grocery List
-          <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded-md ml-1">
+          <ShoppingCart size={15} strokeWidth={2} /> Grocery list
+          <span className={clsx('font-normal', tab === 'grocery' ? 'text-violet-100' : 'text-ink-faint')}>
             {groceryList.length}
           </span>
         </button>
@@ -217,214 +171,192 @@ export default function MealPlanner() {
 
       {tab === 'week' ? (
         <>
-          {/* Day Selector */}
-          <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide pb-1">
+          <div className="scrollbar-hide mt-5 flex gap-2 overflow-x-auto pb-1">
             {DAY_LABELS.map((label, i) => (
               <button
                 key={i}
                 onClick={() => setSelectedDay(i)}
-                className={clsx(
-                  'flex-shrink-0 w-14 h-16 rounded-xl flex flex-col items-center justify-center border-3 border-black font-black text-xs uppercase transition-all duration-150',
-                  selectedDay === i
-                    ? 'bg-brand-500 text-white shadow-neo-sm'
-                    : 'bg-white hover:shadow-neo-sm hover:bg-gray-50'
-                )}
+                aria-pressed={selectedDay === i}
+                className={clsx('pill w-[4.5rem] flex-shrink-0 justify-center', selectedDay === i && 'pill-on')}
               >
-                <span>{label}</span>
-                <span className="text-lg">{i + 1}</span>
+                {label}
               </button>
             ))}
           </div>
 
-          {/* Day Navigation */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="mt-6 flex items-center justify-between gap-3">
             <button
               onClick={() => setSelectedDay(Math.max(0, selectedDay - 1))}
               disabled={selectedDay === 0}
-              className="p-2 rounded-lg border-2 border-black bg-white disabled:opacity-30 hover:shadow-neo-sm transition-all"
+              aria-label="Previous day"
+              className="rounded-full border border-ink/20 p-2.5 text-ink transition-colors hover:bg-paper-grey disabled:opacity-30"
             >
-              <ChevronLeft size={18} strokeWidth={3} />
+              <ChevronLeft size={17} strokeWidth={2} />
             </button>
-            <h2 className="text-xl font-black uppercase tracking-tight">{DAY_FULL[selectedDay]}</h2>
+            <h2 className="text-[1.5rem] leading-none">{DAY_FULL[selectedDay]}</h2>
             <button
               onClick={() => setSelectedDay(Math.min(6, selectedDay + 1))}
               disabled={selectedDay === 6}
-              className="p-2 rounded-lg border-2 border-black bg-white disabled:opacity-30 hover:shadow-neo-sm transition-all"
+              aria-label="Next day"
+              className="rounded-full border border-ink/20 p-2.5 text-ink transition-colors hover:bg-paper-grey disabled:opacity-30"
             >
-              <ChevronRight size={18} strokeWidth={3} />
+              <ChevronRight size={17} strokeWidth={2} />
             </button>
           </div>
 
-          {/* Meal Cards */}
-          <div className="space-y-4 mb-6">
-            {MEAL_TIMES.map(({ key, label, emoji, bg }) => {
+          <div className="mt-5 space-y-3">
+            {MEAL_TIMES.map(({ key, label, icon: Icon, fill }) => {
               const meal = today[key];
               return (
-                <div key={key} className="card">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg w-10 h-10 rounded-lg border-2 border-black flex items-center justify-center" style={{ backgroundColor: bg }}>
-                        {emoji}
-                      </span>
-                      <h3 className="font-black text-sm uppercase tracking-wider">{label}</h3>
-                    </div>
-                    <button
-                      onClick={() => {
-                        // Force re-render with new plan after swap
-                        setCalories(c => c); // no-op to trigger useMemo recalc
-                      }}
-                      className="flex items-center gap-1 text-xs font-black text-black uppercase tracking-wider border-2 border-black px-3 py-1.5 rounded-lg hover:shadow-neo-sm transition-all"
-                      style={{ backgroundColor: '#FFD803' }}
+                <article key={key} className="panel">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={clsx(
+                        'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-ink',
+                        fill
+                      )}
                     >
-                      <RefreshCw size={12} strokeWidth={3} /> Swap
-                    </button>
+                      <Icon size={16} strokeWidth={1.75} />
+                    </span>
+                    <span className="eyebrow">{label}</span>
+                    <span className="ml-auto text-[13px] text-ink-soft">
+                      {meal.prepMinutes} min prep
+                      {meal.isVegetarian && <span className="ml-2 chip-outline">Veg</span>}
+                    </span>
                   </div>
-                  <h4 className="text-lg font-black text-black">{meal.name}</h4>
-                  <p className="text-sm text-gray-600 font-medium mt-1">{meal.description}</p>
-                  <div className="grid grid-cols-4 gap-2 mt-4">
-                    <div className="rounded-lg border-2 border-black p-2 text-center" style={{ backgroundColor: '#FF8C42' }}>
-                      <p className="text-sm font-black text-black">{meal.macros.calories}</p>
-                      <p className="text-[9px] font-bold text-black/70 uppercase">kcal</p>
-                    </div>
-                    <div className="rounded-lg border-2 border-black p-2 text-center" style={{ backgroundColor: '#FF6B9D' }}>
-                      <p className="text-sm font-black text-black">{meal.macros.proteinG}g</p>
-                      <p className="text-[9px] font-bold text-black/70 uppercase">protein</p>
-                    </div>
-                    <div className="rounded-lg border-2 border-black p-2 text-center" style={{ backgroundColor: '#00B4D8' }}>
-                      <p className="text-sm font-black text-black">{meal.macros.carbsG}g</p>
-                      <p className="text-[9px] font-bold text-black/70 uppercase">carbs</p>
-                    </div>
-                    <div className="rounded-lg border-2 border-black p-2 text-center" style={{ backgroundColor: '#FFD803' }}>
-                      <p className="text-sm font-black text-black">{meal.macros.fatG}g</p>
-                      <p className="text-[9px] font-bold text-black/70 uppercase">fat</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-3 text-xs font-bold text-gray-500 uppercase">
-                    <span>{meal.prepMinutes} min prep</span>
-                    {meal.isVegetarian && <span className="text-brand-600">🌱 VEG</span>}
-                  </div>
-                </div>
+
+                  <h3 className="mt-4 text-[1.35rem] leading-tight">{meal.name}</h3>
+                  <p className="mt-1.5 max-w-[62ch] text-[14px] leading-relaxed text-ink-soft">
+                    {meal.description}
+                  </p>
+
+                  <dl className="mt-4 grid grid-cols-4 gap-2 border-t border-ink/10 pt-4">
+                    {[
+                      { label: 'kcal', value: meal.macros.calories },
+                      { label: 'protein', value: `${meal.macros.proteinG}g` },
+                      { label: 'carbs', value: `${meal.macros.carbsG}g` },
+                      { label: 'fat', value: `${meal.macros.fatG}g` },
+                    ].map((m) => (
+                      <div key={m.label}>
+                        <dd className="font-display text-[19px] leading-none">{m.value}</dd>
+                        <dt className="mt-1 text-[11px] font-semibold text-ink-faint">{m.label}</dt>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
               );
             })}
           </div>
 
-          {/* Daily Totals */}
-          <div className="bg-brand-500 rounded-xl border-3 border-black shadow-neo p-5 mb-4">
-            <h3 className="font-black text-white text-sm uppercase tracking-widest mb-3">Daily Totals</h3>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{today.totalMacros.calories}</p>
-                <p className="text-[10px] font-bold text-white/70 uppercase">kcal</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{today.totalMacros.proteinG}g</p>
-                <p className="text-[10px] font-bold text-white/70 uppercase">protein</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{today.totalMacros.carbsG}g</p>
-                <p className="text-[10px] font-bold text-white/70 uppercase">carbs</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-black text-white">{today.totalMacros.fatG}g</p>
-                <p className="text-[10px] font-bold text-white/70 uppercase">fat</p>
-              </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="rounded-panel bg-surface-yellow p-7">
+              <span className="eyebrow">{DAY_FULL[selectedDay]} total</span>
+              <dl className="mt-5 grid grid-cols-4 gap-2">
+                {[
+                  { label: 'kcal', value: today.totalMacros.calories },
+                  { label: 'protein', value: `${today.totalMacros.proteinG}g` },
+                  { label: 'carbs', value: `${today.totalMacros.carbsG}g` },
+                  { label: 'fat', value: `${today.totalMacros.fatG}g` },
+                ].map((m) => (
+                  <div key={m.label}>
+                    <dd className="font-display text-[22px] leading-none">{m.value}</dd>
+                    <dt className="mt-1 text-[11px] font-semibold text-ink-soft">{m.label}</dt>
+                  </div>
+                ))}
+              </dl>
             </div>
-          </div>
 
-          {/* Weekly Summary */}
-          <div className="bg-black rounded-xl border-3 border-black shadow-neo p-5">
-            <h3 className="font-black text-sm uppercase tracking-widest mb-3" style={{ color: '#FFD803' }}>Weekly Total</h3>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="text-center">
-                <p className="text-xl font-black text-white">{weekPlan.weeklyMacros.calories}</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">kcal</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-black" style={{ color: '#FF6B9D' }}>{weekPlan.weeklyMacros.proteinG}g</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">protein</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-black" style={{ color: '#00B4D8' }}>{weekPlan.weeklyMacros.carbsG}g</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">carbs</p>
-              </div>
-              <div className="text-center">
-                <p className="text-xl font-black" style={{ color: '#FFD803' }}>{weekPlan.weeklyMacros.fatG}g</p>
-                <p className="text-[10px] font-bold text-gray-400 uppercase">fat</p>
-              </div>
+            <div className="rounded-panel bg-ink p-7 text-white">
+              <span className="eyebrow text-white/60">Week total</span>
+              <dl className="mt-5 grid grid-cols-4 gap-2">
+                {[
+                  { label: 'kcal', value: weekPlan.weeklyMacros.calories },
+                  { label: 'protein', value: `${weekPlan.weeklyMacros.proteinG}g` },
+                  { label: 'carbs', value: `${weekPlan.weeklyMacros.carbsG}g` },
+                  { label: 'fat', value: `${weekPlan.weeklyMacros.fatG}g` },
+                ].map((m) => (
+                  <div key={m.label}>
+                    <dd className="font-display text-[22px] leading-none">{m.value}</dd>
+                    <dt className="mt-1 text-[11px] font-semibold text-white/60">{m.label}</dt>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </>
       ) : (
-        /* Grocery List Tab */
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black uppercase tracking-tight">
-              Shopping List
-            </h2>
-            <span className="text-xs font-black uppercase border-2 border-black px-3 py-1 rounded-lg" style={{ backgroundColor: '#B5FF3C' }}>
-              {checkedItems.size}/{groceryList.length} done
+        <div className="mt-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-[1.5rem] leading-none">Shopping list</h2>
+              <p className="mt-2 max-w-[52ch] text-[14px] text-ink-soft">
+                Everything for seven days of meals. Tap an item to check it off as you shop.
+              </p>
+            </div>
+            <span className="chip-outline">
+              {checkedItems.size} of {groceryList.length} done
             </span>
           </div>
 
-          <p className="text-sm font-bold text-gray-500 mb-6">
-            Everything you need for 7 days of meals. Tap to check off items as you shop.
-          </p>
-
-          {Object.entries(groupedGrocery).map(([category, items]) => (
-            <div key={category} className="mb-6">
-              <h3 className="text-xs font-black uppercase tracking-widest text-white bg-black inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-black mb-3">
-                <span>{categoryIcon(category)}</span> {category}
-              </h3>
-              <div className="space-y-2">
-                {items.map((item) => {
-                  const key = `${item.name}-${item.unit}`;
-                  const isChecked = checkedItems.has(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => toggleGrocery(key)}
-                      className={clsx(
-                        'w-full flex items-center gap-3 p-3 rounded-xl border-3 border-black text-left transition-all duration-150',
-                        isChecked
-                          ? 'bg-brand-100 shadow-none translate-x-[2px] translate-y-[2px]'
-                          : 'bg-white shadow-neo-sm hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]'
-                      )}
-                    >
-                      <div className={clsx(
-                        'w-7 h-7 rounded-md border-2 border-black flex items-center justify-center flex-shrink-0 transition-colors',
-                        isChecked ? 'bg-brand-500' : 'bg-white'
-                      )}>
-                        {isChecked && <Check size={14} strokeWidth={3} className="text-white" />}
-                      </div>
-                      <span className="text-lg flex-shrink-0" aria-hidden>{groceryIcon(item.name)}</span>
-                      <span className={clsx(
-                        'flex-1 font-bold text-sm',
-                        isChecked && 'line-through text-gray-400'
-                      )}>
-                        {item.name}
-                      </span>
-                      <span
-                        className={clsx(
-                          'text-xs font-black uppercase tracking-wider border-2 border-black px-2 py-1 rounded-lg',
-                          isChecked && 'opacity-50'
-                        )}
-                        style={{ backgroundColor: '#FFD803' }}
-                      >
-                        {Math.round(item.quantity)} {item.unit}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          {checkedItems.size === groceryList.length && groceryList.length > 0 && (
-            <div className="bg-brand-500 rounded-xl border-3 border-black shadow-neo p-6 text-center">
-              <span className="text-4xl block mb-2">🎉</span>
-              <p className="text-white font-black text-lg uppercase">All done! Ready to cook!</p>
+          {allChecked && (
+            <div
+              className="mt-5 rounded-panel bg-surface-yellow px-6 py-8 text-center"
+              role="status"
+            >
+              <p className="font-display text-[1.5rem] leading-none">List cleared</p>
+              <p className="mt-2 text-[14px] text-ink-soft">Everything is in the basket. Go cook.</p>
             </div>
           )}
+
+          <div className="mt-6 space-y-8">
+            {Object.entries(groupedGrocery).map(([category, items]) => (
+              <section key={category}>
+                <h3 className="eyebrow">{category}</h3>
+                <ul className="mt-2 divide-y divide-ink/10 border-t border-ink/10">
+                  {items.map((item) => {
+                    const key = `${item.name}-${item.unit}`;
+                    const isChecked = checkedItems.has(key);
+                    return (
+                      <li key={key}>
+                        <button
+                          onClick={() => toggleGrocery(key)}
+                          aria-pressed={isChecked}
+                          className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-paper-warm"
+                        >
+                          <span
+                            className={clsx(
+                              'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border transition-colors',
+                              isChecked
+                                ? 'border-violet-500 bg-violet-500 text-white'
+                                : 'border-ink/25 bg-paper'
+                            )}
+                          >
+                            {isChecked && <Check size={12} strokeWidth={3} />}
+                          </span>
+                          <span
+                            className={clsx(
+                              'flex-1 text-[15px] font-semibold',
+                              isChecked && 'text-ink-faint line-through'
+                            )}
+                          >
+                            {item.name}
+                          </span>
+                          <span
+                            className={clsx(
+                              'text-[13px] font-bold tabular-nums',
+                              isChecked ? 'text-ink-faint' : 'text-ink-soft'
+                            )}
+                          >
+                            {Math.round(item.quantity)} {item.unit}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       )}
     </div>

@@ -4,9 +4,9 @@ import BottomNav from './BottomNav';
 
 export default function Layout() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#FFFDF7' }}>
+    <div className="min-h-[100dvh] bg-paper">
       <Sidebar />
-      <main className="md:ml-64 pb-20 md:pb-8">
+      <main className="pb-24 md:ml-64 md:pb-10">
         <Outlet />
       </main>
       <BottomNav />

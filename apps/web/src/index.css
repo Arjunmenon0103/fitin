@@ -4,96 +4,205 @@
 
 @layer base {
   :root {
-    --color-brand: #22c55e;
+    --accent: #3b308f;
+    --hairline: rgba(20, 20, 20, 0.12);
+    --hairline-strong: rgba(20, 20, 20, 0.2);
   }
-  
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    background-color: #FFFDF7;
-    @apply text-gray-900 font-sans;
+    @apply bg-paper text-ink font-sans;
+    font-weight: 500;
   }
 
   * {
     @apply antialiased;
   }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display font-normal;
+    letter-spacing: -0.01em;
+    line-height: 0.95;
+  }
+
+  /* Young Serif has no descender clearance at leading < 1 — reserve it. */
+  h1 {
+    padding-bottom: 0.06em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: #faed8f;
+    color: #141414;
+  }
 }
 
 @layer components {
-  .card {
-    @apply bg-white rounded-xl p-5;
-    border: 3px solid #000;
-    box-shadow: 4px 4px 0px 0px #000;
+  /* ---- Surfaces --------------------------------------------------------- */
+
+  .panel {
+    @apply bg-paper rounded-panel p-6;
+    border: 1px solid var(--hairline);
+    box-shadow: 0 2px 6px -2px rgba(20, 20, 20, 0.06);
   }
 
-  .card:hover {
-    box-shadow: 2px 2px 0px 0px #000;
-    transform: translate(2px, 2px);
-    transition: all 0.15s ease;
+  .panel-flat {
+    @apply rounded-panel p-6;
+    border: 1px solid var(--hairline);
   }
-  
+
+  .tile {
+    @apply rounded-tile p-4;
+    border: 1px solid var(--hairline);
+  }
+
+  /* ---- Buttons ---------------------------------------------------------- */
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3;
+    @apply text-sm font-bold tracking-[-0.01em];
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  }
+
+  .btn:active {
+    transform: scale(0.975);
+  }
+
+  .btn:disabled {
+    @apply opacity-50;
+    pointer-events: none;
+  }
+
+  /* Violet on white: 11.4:1. Passes AA and AAA. */
   .btn-primary {
-    @apply bg-brand-500 text-white font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
-    border: 3px solid #000;
-    box-shadow: 2px 2px 0px 0px #000;
+    @apply btn bg-violet-500 text-white;
   }
 
   .btn-primary:hover {
-    @apply bg-brand-600;
-    box-shadow: none;
-    transform: translate(2px, 2px);
+    @apply bg-violet-600;
+    box-shadow: 0 8px 20px -8px rgba(59, 48, 143, 0.6);
   }
 
-  .btn-primary:active {
-    box-shadow: none;
-    transform: translate(4px, 4px);
-  }
-  
+  /* Ink on pale yellow: 14.9:1. */
   .btn-secondary {
-    @apply text-black font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
-    background-color: #FFD803;
-    border: 3px solid #000;
-    box-shadow: 2px 2px 0px 0px #000;
+    @apply btn bg-surface-yellow text-ink;
   }
 
   .btn-secondary:hover {
-    box-shadow: none;
-    transform: translate(2px, 2px);
+    @apply bg-surface-gold;
   }
 
+  /* Ink on white with a visible stroke, so it never disappears. */
+  .btn-ghost {
+    @apply btn bg-paper text-ink;
+    border: 1px solid var(--hairline-strong);
+  }
+
+  .btn-ghost:hover {
+    @apply bg-paper-grey;
+  }
+
+  /* White on wine: 12.6:1. */
   .btn-danger {
-    @apply text-white font-extrabold py-3 px-6 rounded-xl uppercase tracking-wide transition-all duration-150;
-    background-color: #FF4444;
-    border: 3px solid #000;
-    box-shadow: 2px 2px 0px 0px #000;
+    @apply btn text-white;
+    background-color: #670a2e;
   }
 
   .btn-danger:hover {
-    box-shadow: none;
-    transform: translate(2px, 2px);
-  }
-  
-  .badge {
-    @apply inline-flex items-center px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider;
-    border: 2px solid #000;
-  }
-  
-  .badge-muscle {
-    @apply inline-flex items-center px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-200 text-brand-900;
-    border: 2px solid #000;
+    background-color: #4d0722;
   }
 
-  .neo-input {
-    @apply w-full px-4 py-3 rounded-xl bg-white font-bold text-lg transition-shadow;
-    border: 3px solid #000;
+  /* ---- Form fields ------------------------------------------------------ */
+
+  .field-label {
+    @apply block text-[13px] font-bold text-ink mb-1.5;
   }
 
-  .neo-input:focus {
-    box-shadow: 4px 4px 0px 0px #16a34a;
-    outline: none;
+  .field-hint {
+    @apply block text-[13px] text-ink-soft mt-1.5;
   }
 
-  .neo-tag {
-    @apply inline-block px-3 py-1 rounded-lg font-bold text-sm;
-    border: 2px solid #000;
+  .field-error {
+    @apply block text-[13px] font-semibold mt-1.5;
+    color: #670a2e;
+  }
+
+  .field {
+    @apply w-full rounded-field bg-paper px-4 py-3 text-[15px] font-medium text-ink;
+    border: 1px solid var(--hairline-strong);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  /* ink-faint on white: 3.4:1 — placeholders are non-essential text, and the
+     label above every field carries the meaning. */
+  .field::placeholder {
+    @apply text-ink-faint;
+    font-weight: 500;
+  }
+
+  .field:focus {
+    @apply outline-none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 48, 143, 0.18);
+  }
+
+  /* ---- Chips ------------------------------------------------------------ */
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1;
+    @apply text-[12px] font-bold leading-5 text-ink bg-paper-grey;
+  }
+
+  .chip-outline {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1;
+    @apply text-[12px] font-bold leading-5 text-ink bg-transparent;
+    border: 1px solid var(--hairline-strong);
+  }
+
+  /* Selectable pill used across split pickers, day pickers, filters. */
+  .pill {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2;
+    @apply text-[13px] font-bold text-ink bg-paper whitespace-nowrap;
+    border: 1px solid var(--hairline-strong);
+    transition: background-color 0.18s ease, color 0.18s ease,
+      border-color 0.18s ease, transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .pill:hover {
+    @apply bg-paper-grey;
+  }
+
+  .pill:active {
+    transform: scale(0.97);
+  }
+
+  .pill-on {
+    @apply bg-violet-500 text-white;
+    border-color: #3b308f;
+  }
+
+  .pill-on:hover {
+    @apply bg-violet-600;
+  }
+
+  /* ---- Type helpers ----------------------------------------------------- */
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.16em] text-ink-soft;
+  }
+
+  .note {
+    @apply font-hand text-[19px] leading-tight text-violet-500;
   }
 }
 
@@ -102,7 +211,32 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Entrance reveal. Sequences the reading order of a screen on first paint —
+     the only motion that runs unprompted. Set --i on children to stagger. */
+  .rise {
+    @apply animate-rise;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .rise {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 }

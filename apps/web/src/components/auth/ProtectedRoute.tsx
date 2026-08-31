@@ -9,9 +9,12 @@ export default function ProtectedRoute() {
 
   if (!initialized || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#FFFDF7' }}>
-        <div className="card max-w-sm w-full text-center">
-          <p className="text-sm font-black uppercase tracking-widest text-black">Loading FitIn...</p>
+      <div className="flex min-h-[100dvh] items-center justify-center bg-paper px-4">
+        <div className="w-full max-w-sm space-y-3" aria-busy="true" aria-live="polite">
+          <div className="h-10 w-2/3 rounded-full bg-paper-grey" />
+          <div className="h-32 rounded-panel bg-paper-grey" />
+          <div className="h-32 rounded-panel bg-paper-grey" />
+          <span className="sr-only">Loading FitIn</span>
         </div>
       </div>
     );

@@ -6,6 +6,8 @@ import MealPlanner from './pages/MealPlanner';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import PublicHome from './pages/PublicHome';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Feedback from './pages/Feedback';
 import Admin from './pages/Admin';
 import AuthBootstrap from './components/auth/AuthBootstrap';
@@ -21,6 +23,8 @@ export default function App() {
 
       <Routes>
         <Route path="/" element={<PublicHome />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>

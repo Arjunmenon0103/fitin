@@ -9,14 +9,23 @@ interface AuthState {
   initialized: boolean;
   loading: boolean;
   error: string | null;
+  /** Set when Supabase hands back a recovery session from an emailed link. */
+  recoveryMode: boolean;
   initialize: () => Promise<() => void>;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<boolean>;
+  updatePassword: (password: string) => Promise<boolean>;
   refreshAdminStatus: () => Promise<void>;
   setIsAdmin: (isAdmin: boolean) => void;
   clearError: () => void;
 }
+
+const NOT_CONFIGURED = 'Supabase is not configured. Add env vars to enable login.';
+
+/** Where Supabase sends the user back to after they click the emailed link. */
+export const PASSWORD_RESET_REDIRECT = `${window.location.origin}/reset-password`;
 
 function setAuthState(set: (partial: Partial<AuthState>) => void, session: Session | null) {
   set({
@@ -35,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialized: false,
   loading: true,
   error: null,
+  recoveryMode: false,
 
   refreshAdminStatus: async () => {
     if (!hasSupabaseConfig || !supabase) {
@@ -55,11 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: async () => {
     if (!hasSupabaseConfig || !supabase) {
-      set({
-        initialized: true,
-        loading: false,
-        error: 'Supabase is not configured. Add env vars to enable login.',
-      });
+      set({ initialized: true, loading: false, error: NOT_CONFIGURED });
       return () => {};
     }
 
@@ -84,8 +90,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange(async (_event, session) => {
+    } = client.auth.onAuthStateChange(async (event, session) => {
       setAuthState(set, session);
+
+      // Clicking the emailed reset link signs the user in with a short-lived
+      // recovery session. ResetPassword reads this to know the link was valid.
+      if (event === 'PASSWORD_RECOVERY') set({ recoveryMode: true });
+
       if (!session) return;
       const { data: isAdminData } = await client.rpc('is_admin_user');
       set({ isAdmin: Boolean(isAdminData) });
@@ -98,7 +109,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signIn: async (email, password) => {
     if (!hasSupabaseConfig || !supabase) {
-      set({ error: 'Supabase is not configured. Add env vars to enable login.' });
+      set({ error: NOT_CONFIGURED });
       return false;
     }
 
@@ -120,7 +131,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signUp: async (email, password) => {
     if (!hasSupabaseConfig || !supabase) {
-      set({ error: 'Supabase is not configured. Add env vars to enable login.' });
+      set({ error: NOT_CONFIGURED });
       return false;
     }
 
@@ -146,9 +157,50 @@ export const useAuthStore = create<AuthState>((set) => ({
     return true;
   },
 
+  sendPasswordReset: async (email) => {
+    if (!hasSupabaseConfig || !supabase) {
+      set({ error: NOT_CONFIGURED });
+      return false;
+    }
+
+    set({ loading: true, error: null });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: PASSWORD_RESET_REDIRECT,
+    });
+
+    set({ loading: false, error: error ? error.message : null });
+    return !error;
+  },
+
+  updatePassword: async (password) => {
+    if (!hasSupabaseConfig || !supabase) {
+      set({ error: NOT_CONFIGURED });
+      return false;
+    }
+
+    set({ loading: true, error: null });
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      set({ loading: false, error: error.message });
+      return false;
+    }
+
+    set({ loading: false, recoveryMode: false });
+    return true;
+  },
+
   signOut: async () => {
     if (supabase) await supabase.auth.signOut();
-    set({ user: null, session: null, isAdmin: false, loading: false, initialized: true, error: null });
+    set({
+      user: null,
+      session: null,
+      isAdmin: false,
+      loading: false,
+      initialized: true,
+      error: null,
+      recoveryMode: false,
+    });
   },
 
   clearError: () => set({ error: null }),
